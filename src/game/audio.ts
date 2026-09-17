@@ -3,8 +3,10 @@
 
 class SoundManager {
   private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
   private muted: boolean = false;
   private volume: number = 0.5; // 0.0 to 1.0 (default 50%)
+  private playSessionId: number = 0;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -26,12 +28,26 @@ class SoundManager {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime);
+        this.masterGain.connect(this.ctx.destination);
       }
     }
     if (this.ctx && this.ctx.state === "suspended") {
       void this.ctx.resume();
     }
     return this.ctx;
+  }
+
+  private getDestinationNode(): AudioNode | null {
+    const ctx = this.getContext();
+    if (!ctx) return null;
+    if (!this.masterGain) {
+      this.masterGain = ctx.createGain();
+      this.masterGain.gain.setValueAtTime(this.muted ? 0 : this.volume, ctx.currentTime);
+      this.masterGain.connect(ctx.destination);
+    }
+    return this.masterGain;
   }
 
   public isMuted(): boolean {
@@ -43,10 +59,15 @@ class SoundManager {
   }
 
   public setVolume(vol: number): void {
-    const clamped = Math.max(0, Math.min(1, vol));
+    const clamped = Math.max(0, Math.min(1, Math.round(vol * 100) / 100));
     this.volume = clamped;
     if (typeof window !== "undefined") {
       localStorage.setItem("ztt.audio.volume", String(clamped));
+    }
+
+    const ctx = this.getContext();
+    if (ctx && this.masterGain) {
+      this.masterGain.gain.setValueAtTime(this.muted ? 0 : this.volume, ctx.currentTime);
     }
 
     if (clamped === 0) {
@@ -62,15 +83,12 @@ class SoundManager {
         localStorage.setItem("ztt.audio.muted", "false");
       }
       this.radioPlaying = true;
-      const ctx = this.getContext();
       if (ctx && ctx.state === "suspended") {
         ctx.resume().catch(() => {});
       }
       this.startCurrentStation();
-    } else {
-      if (this.radioAudioElement) {
-        this.radioAudioElement.volume = this.volume * 0.4;
-      }
+    } else if (this.radioAudioElement) {
+      this.radioAudioElement.volume = this.volume * 0.4;
     }
 
     this.notifyRadioListeners();
@@ -78,8 +96,14 @@ class SoundManager {
 
   public setMuted(val: boolean): void {
     this.muted = val;
+    this.playSessionId++;
     if (typeof window !== "undefined") {
       localStorage.setItem("ztt.audio.muted", String(this.muted));
+    }
+
+    const ctx = this.getContext();
+    if (ctx && this.masterGain) {
+      this.masterGain.gain.setValueAtTime(this.muted ? 0 : this.volume, ctx.currentTime);
     }
 
     if (this.muted) {
@@ -92,7 +116,6 @@ class SoundManager {
           localStorage.setItem("ztt.audio.volume", "0.5");
         }
       }
-      const ctx = this.getContext();
       if (ctx && ctx.state === "suspended") {
         ctx.resume().catch(() => {});
       }
@@ -681,13 +704,84 @@ class SoundManager {
     return this.isPirateMode;
   }
 
-  public togglePirateMode(): boolean {
-    this.playRadioTune();
-    this.isPirateMode = !this.isPirateMode;
+  // Som mecânico e retrô de fita K7 sendo inserida no deck
+  public playTapeInsert() {
+    const ctx = this.getContext();
+    const dest = this.getDestinationNode();
+    if (!ctx || !dest || this.muted) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Ruído de fricção do compartimento da fita
+    const bufSize = Math.floor(ctx.sampleRate * 0.05);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.25;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(2000, now);
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.25, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(dest);
+    noise.start(now);
+
+    // 2. Trava metálica da mola (Click 1)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "triangle";
+    osc1.frequency.setValueAtTime(1200, now + 0.06);
+    osc1.frequency.exponentialRampToValueAtTime(280, now + 0.12);
+    gain1.gain.setValueAtTime(0.3, now + 0.06);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc1.connect(gain1);
+    gain1.connect(dest);
+    osc1.start(now + 0.06);
+    osc1.stop(now + 0.12);
+
+    // 3. Batida mecânica sólida "CLACK-CHUNCK" (Encaixe e cabeça magnética)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "square";
+    osc2.frequency.setValueAtTime(190, now + 0.12);
+    osc2.frequency.exponentialRampToValueAtTime(50, now + 0.24);
+    gain2.gain.setValueAtTime(0.35, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    osc2.connect(gain2);
+    gain2.connect(dest);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.24);
+  }
+
+  public playTapeMode(): void {
+    this.playTapeInsert();
+    this.isPirateMode = true;
     this.currentStationIndex = 0;
     this.currentTrackNumber = 1;
-    if (this.radioPlaying && !this.muted) {
-      this.startCurrentStation();
+    this.radioPlaying = true;
+    this.setMuted(false);
+  }
+
+  public playFmRadioMode(): void {
+    this.playRadioTune();
+    this.isPirateMode = false;
+    this.currentStationIndex = 0;
+    this.currentTrackNumber = 1;
+    this.radioPlaying = true;
+    this.setMuted(false);
+  }
+
+  public togglePirateMode(): boolean {
+    if (this.isPirateMode) {
+      this.playFmRadioMode();
+    } else {
+      this.playTapeMode();
     }
     this.notifyRadioListeners();
     return this.isPirateMode;
@@ -767,11 +861,16 @@ class SoundManager {
   }
 
   private stopAudioAndProcedural() {
+    this.playSessionId++;
     if (this.radioAudioElement) {
-      this.radioAudioElement.pause();
-      this.radioAudioElement.currentTime = 0;
-      this.radioAudioElement.onended = null;
-      this.radioAudioElement.onerror = null;
+      try {
+        this.radioAudioElement.pause();
+        this.radioAudioElement.currentTime = 0;
+        this.radioAudioElement.onended = null;
+        this.radioAudioElement.onerror = null;
+      } catch {
+        // ignore
+      }
       this.radioAudioElement = null;
     }
     if (this.proceduralInterval) {
@@ -808,7 +907,8 @@ class SoundManager {
   }
 
   private tryPlayAudioFile(src: string, station: typeof this.officialStations[0], onFail: () => void) {
-    if (this.muted) {
+    const sessionId = this.playSessionId;
+    if (this.muted || !this.radioPlaying) {
       onFail();
       return;
     }
@@ -816,28 +916,36 @@ class SoundManager {
     const audio = new Audio(src);
     audio.volume = this.muted ? 0 : this.volume * 0.4;
     audio.muted = this.muted;
+    this.radioAudioElement = audio;
 
     audio.onended = () => {
-      this.currentTrackNumber += 1;
-      this.startCurrentStation();
+      if (sessionId === this.playSessionId && this.radioPlaying && !this.muted) {
+        this.currentTrackNumber += 1;
+        this.startCurrentStation();
+      }
     };
 
     audio.onerror = () => {
-      onFail();
+      if (sessionId === this.playSessionId) {
+        onFail();
+      }
     };
 
     audio
       .play()
       .then(() => {
-        if (this.muted || !this.radioPlaying) {
+        if (sessionId !== this.playSessionId || this.muted || !this.radioPlaying) {
           audio.pause();
           audio.currentTime = 0;
-          return;
+          if (this.radioAudioElement === audio) {
+            this.radioAudioElement = null;
+          }
         }
-        this.radioAudioElement = audio;
       })
       .catch(() => {
-        onFail();
+        if (sessionId === this.playSessionId) {
+          onFail();
+        }
       });
   }
 
