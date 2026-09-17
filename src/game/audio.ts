@@ -1,14 +1,22 @@
-// Web Audio API procedural retro 8-bit sound generator
-// Zero external files, instant loading, zero latency, pure arcade nostalgia.
+// Web Audio API procedural retro 8-bit sound generator & BGM Radio Manager
+// Zero external files dependency, instant loading, zero latency, pure arcade nostalgia.
 
 class SoundManager {
   private ctx: AudioContext | null = null;
   private muted: boolean = false;
+  private volume: number = 0.5; // 0.0 to 1.0 (default 50%)
 
   constructor() {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("ztt.audio.muted");
-      this.muted = stored === "true";
+      const storedMuted = localStorage.getItem("ztt.audio.muted");
+      this.muted = storedMuted === "true";
+      const storedVol = localStorage.getItem("ztt.audio.volume");
+      if (storedVol !== null) {
+        const parsed = parseFloat(storedVol);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+          this.volume = parsed;
+        }
+      }
     }
   }
 
@@ -30,19 +38,83 @@ class SoundManager {
     return this.muted;
   }
 
-  public toggleMute(): boolean {
-    this.muted = !this.muted;
+  public getVolume(): number {
+    return this.volume;
+  }
+
+  public setVolume(vol: number): void {
+    const clamped = Math.max(0, Math.min(1, vol));
+    this.volume = clamped;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ztt.audio.volume", String(clamped));
+    }
+
+    if (clamped === 0 && !this.muted) {
+      this.setMuted(true);
+      return;
+    }
+
+    if (clamped > 0 && this.muted) {
+      this.muted = false;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("ztt.audio.muted", "false");
+      }
+    }
+
+    if (this.radioAudioElement) {
+      this.radioAudioElement.volume = this.muted ? 0 : this.volume * 0.4;
+      this.radioAudioElement.muted = this.muted;
+    }
+
+    this.notifyRadioListeners();
+  }
+
+  public setMuted(val: boolean): void {
+    this.muted = val;
     if (typeof window !== "undefined") {
       localStorage.setItem("ztt.audio.muted", String(this.muted));
     }
+
+    if (this.muted) {
+      if (this.radioAudioElement) {
+        this.radioAudioElement.muted = true;
+        this.radioAudioElement.volume = 0;
+        this.radioAudioElement.pause();
+      }
+      if (this.proceduralInterval) {
+        this.stopAudioAndProcedural();
+      }
+    } else {
+      if (this.radioAudioElement) {
+        this.radioAudioElement.muted = false;
+        this.radioAudioElement.volume = this.volume * 0.4;
+        if (this.radioPlaying) {
+          this.radioAudioElement.play().catch(() => {});
+        }
+      } else if (this.radioPlaying) {
+        this.startCurrentStation();
+      }
+    }
+
+    this.notifyRadioListeners();
+  }
+
+  public toggleMute(): boolean {
+    this.setMuted(!this.muted);
     return this.muted;
   }
 
-  // --- Sound FX ---
+  // --- Sound FX (Scaled by volume & muted state) ---
+
+  private getMasterGain(): number {
+    if (this.muted) return 0;
+    return this.volume;
+  }
 
   // Card select/flip sound
   public playCardFlip() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -54,8 +126,8 @@ class SoundManager {
     osc.frequency.setValueAtTime(320, now);
     osc.frequency.exponentialRampToValueAtTime(700, now + 0.08);
 
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+    gain.gain.setValueAtTime(0.15 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -66,7 +138,8 @@ class SoundManager {
 
   // Attribute choice click
   public playAttrSelect() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -78,8 +151,8 @@ class SoundManager {
     osc.frequency.setValueAtTime(440, now);
     osc.frequency.setValueAtTime(880, now + 0.04);
 
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+    gain.gain.setValueAtTime(0.12 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -90,27 +163,26 @@ class SoundManager {
 
   // Juiz apitando (Whistle)
   public playWhistle() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
 
-    // Dual oscillator with frequency modulation for realistic whistle trill
     [2400, 2460].forEach((freq) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now);
-      // Trill modulation
       osc.frequency.setValueAtTime(freq + 40, now + 0.05);
       osc.frequency.setValueAtTime(freq - 30, now + 0.1);
       osc.frequency.setValueAtTime(freq + 30, now + 0.15);
 
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.setValueAtTime(0.2, now + 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+      gain.gain.setValueAtTime(0.18 * masterGain, now);
+      gain.gain.setValueAtTime(0.2 * masterGain, now + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -122,7 +194,8 @@ class SoundManager {
 
   // Cartão Amarelo / Falta
   public playYellowCard() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -134,8 +207,8 @@ class SoundManager {
     osc.frequency.setValueAtTime(580, now);
     osc.frequency.exponentialRampToValueAtTime(220, now + 0.25);
 
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    gain.gain.setValueAtTime(0.2 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -146,7 +219,8 @@ class SoundManager {
 
   // Ponto ganho na rodada
   public playPointWon() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -159,8 +233,8 @@ class SoundManager {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, now + i * 0.06);
 
-      gain.gain.setValueAtTime(0.18, now + i * 0.06);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.06 + 0.15);
+      gain.gain.setValueAtTime(0.18 * masterGain, now + i * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.15);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -172,7 +246,8 @@ class SoundManager {
 
   // Ponto perdido na rodada
   public playPointLost() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -185,8 +260,8 @@ class SoundManager {
       osc.type = "sawtooth";
       osc.frequency.setValueAtTime(freq, now + i * 0.07);
 
-      gain.gain.setValueAtTime(0.12, now + i * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.07 + 0.16);
+      gain.gain.setValueAtTime(0.12 * masterGain, now + i * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.16);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -198,12 +273,12 @@ class SoundManager {
 
   // GOOOOL! / Posição Vencida (Fanfarra Arcade Triunfante)
   public playGoal() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // C5, E5, G5, C6 (Fanfarra 8-bit rápida)
     const melody = [
       { note: 523.25, time: 0, dur: 0.1 },
       { note: 659.25, time: 0.1, dur: 0.1 },
@@ -218,8 +293,8 @@ class SoundManager {
       osc.type = "square";
       osc.frequency.setValueAtTime(m.note, now + m.time);
 
-      gain.gain.setValueAtTime(0.22, now + m.time);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + m.time + m.dur);
+      gain.gain.setValueAtTime(0.22 * masterGain, now + m.time);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + m.time + m.dur);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -229,9 +304,10 @@ class SoundManager {
     });
   }
 
-  // Chute de Pênalti (Impacto Thump)
+  // Chute de Pênalti
   public playPenaltyKick() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -243,8 +319,8 @@ class SoundManager {
     osc.frequency.setValueAtTime(160, now);
     osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
 
-    gain.gain.setValueAtTime(0.35, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+    gain.gain.setValueAtTime(0.35 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -255,7 +331,8 @@ class SoundManager {
 
   // Defesa de Pênalti
   public playPenaltySave() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -267,8 +344,8 @@ class SoundManager {
     osc.frequency.setValueAtTime(280, now);
     osc.frequency.exponentialRampToValueAtTime(140, now + 0.15);
 
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    gain.gain.setValueAtTime(0.25 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -279,7 +356,8 @@ class SoundManager {
 
   // Vitória no Jogo (Campeão)
   public playVictory() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -301,8 +379,8 @@ class SoundManager {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(m.note, now + m.time);
 
-      gain.gain.setValueAtTime(0.25, now + m.time);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + m.time + m.dur);
+      gain.gain.setValueAtTime(0.25 * masterGain, now + m.time);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + m.time + m.dur);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -312,13 +390,14 @@ class SoundManager {
     });
   }
 
-  // Rasgar pacotinho de figurinha (ruído de plástico / papel)
+  // Rasgar pacotinho de figurinha
   public playPackTear() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
-    const bufferSize = ctx.sampleRate * 0.18; // 180ms
+    const bufferSize = ctx.sampleRate * 0.18;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -334,8 +413,8 @@ class SoundManager {
     filter.Q.setValueAtTime(3.0, ctx.currentTime);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.25 * masterGain, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
 
     noise.connect(filter);
     filter.connect(gain);
@@ -344,14 +423,15 @@ class SoundManager {
     noise.start();
   }
 
-  // Revelação de carta normal/rara
+  // Revelação de carta
   public playCardReveal() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+    const notes = [440, 554.37, 659.25, 880];
     notes.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -359,8 +439,8 @@ class SoundManager {
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now + idx * 0.04);
 
-      gain.gain.setValueAtTime(0.18, now + idx * 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.04 + 0.12);
+      gain.gain.setValueAtTime(0.18 * masterGain, now + idx * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.12);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -370,14 +450,15 @@ class SoundManager {
     });
   }
 
-  // Revelação de carta Lendária / Dourada (Epic chime)
+  // Revelação de carta Lendária
   public playLegendaryReveal() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const chord = [523.25, 659.25, 783.99, 1046.5, 1318.51]; // C major extended
+    const chord = [523.25, 659.25, 783.99, 1046.5, 1318.51];
     chord.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -385,8 +466,8 @@ class SoundManager {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, now + idx * 0.05);
 
-      gain.gain.setValueAtTime(0.22, now + idx * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.05 + 0.4);
+      gain.gain.setValueAtTime(0.22 * masterGain, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.4);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -396,9 +477,10 @@ class SoundManager {
     });
   }
 
-  // Som de moeda (Coin / Bling)
+  // Som de moeda
   public playCoinEarn() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -408,15 +490,15 @@ class SoundManager {
     const gain = ctx.createGain();
 
     osc1.type = "sine";
-    osc1.frequency.setValueAtTime(987.77, now); // B5
-    osc1.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+    osc1.frequency.setValueAtTime(987.77, now);
+    osc1.frequency.setValueAtTime(1318.51, now + 0.08);
 
     osc2.type = "triangle";
     osc2.frequency.setValueAtTime(987.77, now);
     osc2.frequency.setValueAtTime(1318.51, now + 0.08);
 
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    gain.gain.setValueAtTime(0.2 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
     osc1.connect(gain);
     osc2.connect(gain);
@@ -428,9 +510,10 @@ class SoundManager {
     osc2.stop(now + 0.3);
   }
 
-  // Som de colar figurinha no álbum (Sticker slap)
+  // Som de colar figurinha
   public playStickerStick() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -442,8 +525,8 @@ class SoundManager {
     osc.frequency.setValueAtTime(320, now);
     osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
 
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+    gain.gain.setValueAtTime(0.25 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -452,14 +535,14 @@ class SoundManager {
     osc.stop(now + 0.06);
   }
 
-  // Ruído de sintonia de rádio analógico (Radio tuning static & blip)
+  // Ruído de sintonia de rádio
   public playRadioTune() {
-    if (this.muted) return;
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Quick burst of static noise
     const bufferSize = ctx.sampleRate * 0.12;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -474,8 +557,8 @@ class SoundManager {
     filter.frequency.setValueAtTime(1200, now);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.18, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+    gain.gain.setValueAtTime(0.18 * masterGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
     noise.connect(filter);
     filter.connect(gain);
@@ -483,14 +566,13 @@ class SoundManager {
 
     noise.start(now);
 
-    // Followed by a small frequency blip
     const osc = ctx.createOscillator();
     const oscGain = ctx.createGain();
     osc.type = "triangle";
     osc.frequency.setValueAtTime(800, now + 0.05);
     osc.frequency.exponentialRampToValueAtTime(1400, now + 0.15);
-    oscGain.gain.setValueAtTime(0.12, now + 0.05);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    oscGain.gain.setValueAtTime(0.12 * masterGain, now + 0.05);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
     osc.connect(oscGain);
     oscGain.connect(ctx.destination);
     osc.start(now + 0.05);
@@ -575,7 +657,7 @@ class SoundManager {
 
   private isPirateMode = false;
   private currentStationIndex = 0;
-  private currentTrackNumber = 1; // 1.mp3, 2.mp3, 3.mp3...
+  private currentTrackNumber = 1;
   private radioPlaying = false;
   private radioAudioElement: HTMLAudioElement | null = null;
   private proceduralInterval: ReturnType<typeof setInterval> | null = null;
@@ -600,7 +682,7 @@ class SoundManager {
     this.isPirateMode = !this.isPirateMode;
     this.currentStationIndex = 0;
     this.currentTrackNumber = 1;
-    if (this.radioPlaying) {
+    if (this.radioPlaying && !this.muted) {
       this.startCurrentStation();
     }
     this.notifyRadioListeners();
@@ -633,7 +715,7 @@ class SoundManager {
   }
 
   public toggleRadio(): boolean {
-    if (this.radioPlaying) {
+    if (this.radioPlaying && !this.muted) {
       this.pauseRadio();
     } else {
       this.playRadio();
@@ -644,10 +726,11 @@ class SoundManager {
   public playRadio() {
     this.radioPlaying = true;
     if (this.muted) {
-      this.toggleMute();
+      this.setMuted(false);
+    } else {
+      this.startCurrentStation();
+      this.notifyRadioListeners();
     }
-    this.startCurrentStation();
-    this.notifyRadioListeners();
   }
 
   public pauseRadio() {
@@ -661,7 +744,7 @@ class SoundManager {
     const stations = this.getRadioStations();
     this.currentStationIndex = (this.currentStationIndex + 1) % stations.length;
     this.currentTrackNumber = 1;
-    if (this.radioPlaying) {
+    if (this.radioPlaying && !this.muted) {
       this.startCurrentStation();
     }
     this.notifyRadioListeners();
@@ -673,7 +756,7 @@ class SoundManager {
     this.currentStationIndex =
       (this.currentStationIndex - 1 + stations.length) % stations.length;
     this.currentTrackNumber = 1;
-    if (this.radioPlaying) {
+    if (this.radioPlaying && !this.muted) {
       this.startCurrentStation();
     }
     this.notifyRadioListeners();
@@ -704,17 +787,13 @@ class SoundManager {
       return;
     }
 
-    // Attempt to play from folder e.g. /audio/94/1.mp3, /audio/98.5/1.mp3, /audio/k-7/1.mp3
     const folderTrackSrc = `/audio/${station.folder}/${this.currentTrackNumber}.mp3`;
     this.tryPlayAudioFile(folderTrackSrc, station, () => {
-      // If folderTrackSrc failed on track 1, try legacySrc e.g. /audio/menu-theme.mp3
       if (this.currentTrackNumber === 1 && station.legacySrc) {
         this.tryPlayAudioFile(station.legacySrc, station, () => {
-          // If no files found, fallback to 16-bit procedural radio synth
           this.startProceduralBGM(station.proceduralPattern);
         });
       } else {
-        // If track N failed, cycle back to track 1
         this.currentTrackNumber = 1;
         const resetSrc = `/audio/${station.folder}/1.mp3`;
         this.tryPlayAudioFile(resetSrc, station, () => {
@@ -725,10 +804,15 @@ class SoundManager {
   }
 
   private tryPlayAudioFile(src: string, station: typeof this.officialStations[0], onFail: () => void) {
-    const audio = new Audio(src);
-    audio.volume = 0.28;
+    if (this.muted) {
+      onFail();
+      return;
+    }
 
-    // True radio behavior: When song finishes, automatically advance to next track in the station!
+    const audio = new Audio(src);
+    audio.volume = this.muted ? 0 : this.volume * 0.4;
+    audio.muted = this.muted;
+
     audio.onended = () => {
       this.currentTrackNumber += 1;
       this.startCurrentStation();
@@ -741,6 +825,11 @@ class SoundManager {
     audio
       .play()
       .then(() => {
+        if (this.muted || !this.radioPlaying) {
+          audio.pause();
+          audio.currentTime = 0;
+          return;
+        }
         this.radioAudioElement = audio;
       })
       .catch(() => {
@@ -753,7 +842,6 @@ class SoundManager {
     if (this.proceduralInterval) clearInterval(this.proceduralInterval);
     this.proceduralStep = 0;
 
-    // Tempo in ms (120 BPM = ~125ms per 16th note)
     const stepTime = pattern === "samba" ? 140 : pattern === "arcade" ? 120 : 160;
 
     this.proceduralInterval = setInterval(() => {
@@ -767,12 +855,14 @@ class SoundManager {
   }
 
   private playProceduralStep(pattern: string) {
+    const masterGain = this.getMasterGain();
+    if (masterGain <= 0) return;
+
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
     const step = this.proceduralStep;
 
-    // Bassline (Triangle)
     const sambaBass = [130.81, 0, 164.81, 130.81, 174.61, 0, 196.0, 164.81, 130.81, 0, 164.81, 146.83, 174.61, 0, 196.0, 146.83];
     const arcadeBass = [110.0, 110.0, 0, 130.81, 146.83, 146.83, 0, 164.81, 110.0, 110.0, 0, 130.81, 164.81, 174.61, 164.81, 130.81];
     const synthBass = [98.0, 0, 98.0, 0, 123.47, 0, 130.81, 0, 98.0, 0, 110.0, 0, 123.47, 0, 146.83, 0];
@@ -785,15 +875,14 @@ class SoundManager {
       const gain = ctx.createGain();
       osc.type = "triangle";
       osc.frequency.setValueAtTime(bassNote, now);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.14);
+      gain.gain.setValueAtTime(0.08 * masterGain, now);
+      gain.gain.exponentialRampToValueAtTime(0.002, now + 0.14);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.14);
     }
 
-    // Melody / Chords (Square/Sine)
     const melodyNotes = [
       523.25, 0, 659.25, 587.33, 783.99, 0, 659.25, 523.25,
       880.0, 0, 783.99, 659.25, 587.33, 659.25, 523.25, 0,
@@ -805,15 +894,14 @@ class SoundManager {
       const gain = ctx.createGain();
       osc.type = pattern === "synth" ? "sine" : "square";
       osc.frequency.setValueAtTime(melNote, now);
-      gain.gain.setValueAtTime(0.03, now);
-      gain.gain.exponentialRampToValueAtTime(0.002, now + 0.11);
+      gain.gain.setValueAtTime(0.03 * masterGain, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.11);
     }
 
-    // Retro Percussion / Hi-hat (White noise tick on even steps)
     if (step % 2 === 0) {
       const bufferSize = ctx.sampleRate * 0.02;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -826,8 +914,11 @@ class SoundManager {
       const filter = ctx.createBiquadFilter();
       filter.type = "highpass";
       filter.frequency.setValueAtTime(7000, now);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.05 * masterGain, now);
       noise.connect(filter);
-      filter.connect(ctx.destination);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
       noise.start(now);
     }
   }

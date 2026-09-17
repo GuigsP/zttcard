@@ -5,6 +5,7 @@ export function RetroBoombox() {
   const [isPlaying, setIsPlaying] = useState(sound.isRadioPlaying());
   const [station, setStation] = useState(sound.getRadioStation());
   const [isMuted, setIsMuted] = useState(sound.isMuted());
+  const [volume, setVolume] = useState(sound.getVolume());
   const [isPirate, setIsPirate] = useState(sound.getIsPirateMode());
   const [showEasterEggToast, setShowEasterEggToast] = useState(false);
 
@@ -13,6 +14,7 @@ export function RetroBoombox() {
       setIsPlaying(sound.isRadioPlaying());
       setStation(sound.getRadioStation());
       setIsMuted(sound.isMuted());
+      setVolume(sound.getVolume());
       setIsPirate(sound.getIsPirateMode());
     });
     return unsubscribe;
@@ -30,6 +32,12 @@ export function RetroBoombox() {
     const muted = sound.toggleMute();
     setIsMuted(muted);
     setIsPlaying(sound.isRadioPlaying());
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    sound.setVolume(val);
   };
 
   const handleTriggerEasterEgg = () => {
@@ -263,7 +271,46 @@ export function RetroBoombox() {
         </div>
       </div>
 
-      {/* 4. BOTÕES ARCADE LIMPOS (CONTROLES) */}
+      {/* 4. CONTROLE DE VOLUME ANALÓGICO */}
+      <div className="flex items-center gap-1.5 px-2 py-1 mb-2 bg-black/60 rounded border border-zinc-800">
+        <button
+          type="button"
+          onClick={() => sound.setVolume(Math.max(0, volume - 0.1))}
+          className="text-[9px] hover:scale-110 transition-transform cursor-pointer select-none"
+          title="Diminuir volume"
+        >
+          🔈
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={isMuted ? 0 : volume}
+          onChange={handleVolumeChange}
+          className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-zinc-800 ${
+            isPirate ? "accent-fuchsia-400" : "accent-arcade-yellow"
+          }`}
+          title={`Volume: ${isMuted ? 0 : Math.round(volume * 100)}%`}
+        />
+        <button
+          type="button"
+          onClick={() => sound.setVolume(Math.min(1, volume + 0.1))}
+          className="text-[9px] hover:scale-110 transition-transform cursor-pointer select-none"
+          title="Aumentar volume"
+        >
+          🔊
+        </button>
+        <span
+          className={`font-arcade text-[7px] w-6 text-right font-bold tabular-nums ${
+            isPirate ? "text-fuchsia-400" : "text-arcade-yellow"
+          }`}
+        >
+          {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
+        </span>
+      </div>
+
+      {/* 5. BOTÕES ARCADE LIMPOS (CONTROLES) */}
       <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-zinc-800">
         {/* Play / Pausa */}
         <button
