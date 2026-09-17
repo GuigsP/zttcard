@@ -32,6 +32,7 @@ export function RetroBoombox() {
     const muted = sound.toggleMute();
     setIsMuted(muted);
     setIsPlaying(sound.isRadioPlaying());
+    setVolume(sound.getVolume());
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {

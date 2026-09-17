@@ -49,21 +49,28 @@ class SoundManager {
       localStorage.setItem("ztt.audio.volume", String(clamped));
     }
 
-    if (clamped === 0 && !this.muted) {
-      this.setMuted(true);
+    if (clamped === 0) {
+      if (!this.muted) {
+        this.setMuted(true);
+      }
       return;
     }
 
-    if (clamped > 0 && this.muted) {
+    if (this.muted) {
       this.muted = false;
       if (typeof window !== "undefined") {
         localStorage.setItem("ztt.audio.muted", "false");
       }
-    }
-
-    if (this.radioAudioElement) {
-      this.radioAudioElement.volume = this.muted ? 0 : this.volume * 0.4;
-      this.radioAudioElement.muted = this.muted;
+      this.radioPlaying = true;
+      const ctx = this.getContext();
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      this.startCurrentStation();
+    } else {
+      if (this.radioAudioElement) {
+        this.radioAudioElement.volume = this.volume * 0.4;
+      }
     }
 
     this.notifyRadioListeners();
@@ -76,31 +83,28 @@ class SoundManager {
     }
 
     if (this.muted) {
-      if (this.radioAudioElement) {
-        this.radioAudioElement.muted = true;
-        this.radioAudioElement.volume = 0;
-        this.radioAudioElement.pause();
-      }
-      if (this.proceduralInterval) {
-        this.stopAudioAndProcedural();
-      }
+      this.stopAudioAndProcedural();
     } else {
-      if (this.radioAudioElement) {
-        this.radioAudioElement.muted = false;
-        this.radioAudioElement.volume = this.volume * 0.4;
-        if (this.radioPlaying) {
-          this.radioAudioElement.play().catch(() => {});
+      this.radioPlaying = true;
+      if (this.volume <= 0) {
+        this.volume = 0.5;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("ztt.audio.volume", "0.5");
         }
-      } else if (this.radioPlaying) {
-        this.startCurrentStation();
       }
+      const ctx = this.getContext();
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      this.startCurrentStation();
     }
 
     this.notifyRadioListeners();
   }
 
   public toggleMute(): boolean {
-    this.setMuted(!this.muted);
+    const nextMuted = !this.muted;
+    this.setMuted(nextMuted);
     return this.muted;
   }
 
@@ -841,6 +845,17 @@ class SoundManager {
   private startProceduralBGM(pattern: string) {
     if (this.proceduralInterval) clearInterval(this.proceduralInterval);
     this.proceduralStep = 0;
+
+    const ctx = this.getContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    // Play first note immediately
+    if (this.radioPlaying && !this.muted) {
+      this.playProceduralStep(pattern);
+      this.proceduralStep = 1;
+    }
 
     const stepTime = pattern === "samba" ? 140 : pattern === "arcade" ? 120 : 160;
 
