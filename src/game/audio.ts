@@ -82,11 +82,13 @@ class SoundManager {
       if (typeof window !== "undefined") {
         localStorage.setItem("ztt.audio.muted", "false");
       }
-      this.radioPlaying = true;
-      if (ctx && ctx.state === "suspended") {
-        ctx.resume().catch(() => {});
+      if (ctx && this.masterGain) {
+        this.masterGain.gain.setValueAtTime(this.volume, ctx.currentTime);
       }
-      this.startCurrentStation();
+      if (this.radioAudioElement) {
+        this.radioAudioElement.muted = false;
+        this.radioAudioElement.volume = this.volume * 0.4;
+      }
     } else if (this.radioAudioElement) {
       this.radioAudioElement.volume = this.volume * 0.4;
     }
@@ -96,7 +98,6 @@ class SoundManager {
 
   public setMuted(val: boolean): void {
     this.muted = val;
-    this.playSessionId++;
     if (typeof window !== "undefined") {
       localStorage.setItem("ztt.audio.muted", String(this.muted));
     }
@@ -107,9 +108,13 @@ class SoundManager {
     }
 
     if (this.muted) {
-      this.stopAudioAndProcedural();
+      // MUTE: Silencia o áudio sem pausar ou resetar a posição de reprodução!
+      if (this.radioAudioElement) {
+        this.radioAudioElement.muted = true;
+        this.radioAudioElement.volume = 0;
+      }
     } else {
-      this.radioPlaying = true;
+      // DESMUTAR: Restaura o volume na posição exata da música em tempo real!
       if (this.volume <= 0) {
         this.volume = 0.5;
         if (typeof window !== "undefined") {
@@ -119,7 +124,16 @@ class SoundManager {
       if (ctx && ctx.state === "suspended") {
         ctx.resume().catch(() => {});
       }
-      this.startCurrentStation();
+
+      if (this.radioAudioElement) {
+        this.radioAudioElement.muted = false;
+        this.radioAudioElement.volume = this.volume * 0.4;
+        if (this.radioPlaying && this.radioAudioElement.paused) {
+          this.radioAudioElement.play().catch(() => {});
+        }
+      } else if (this.radioPlaying && !this.proceduralInterval) {
+        this.startCurrentStation();
+      }
     }
 
     this.notifyRadioListeners();
@@ -792,7 +806,7 @@ class SoundManager {
   }
 
   public isRadioPlaying() {
-    return this.radioPlaying && !this.muted;
+    return this.radioPlaying;
   }
 
   public subscribeRadio(cb: () => void) {
@@ -813,7 +827,7 @@ class SoundManager {
   }
 
   public toggleRadio(): boolean {
-    if (this.radioPlaying && !this.muted) {
+    if (this.radioPlaying) {
       this.pauseRadio();
     } else {
       this.playRadio();
@@ -823,17 +837,34 @@ class SoundManager {
 
   public playRadio() {
     this.radioPlaying = true;
-    if (this.muted) {
-      this.setMuted(false);
-    } else {
-      this.startCurrentStation();
-      this.notifyRadioListeners();
+    const ctx = this.getContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
     }
+
+    if (this.radioAudioElement && this.radioAudioElement.paused) {
+      this.radioAudioElement.play().catch(() => {
+        this.startCurrentStation();
+      });
+    } else if (!this.radioAudioElement && !this.proceduralInterval) {
+      this.startCurrentStation();
+    }
+    this.notifyRadioListeners();
   }
 
   public pauseRadio() {
     this.radioPlaying = false;
-    this.stopAudioAndProcedural();
+    if (this.radioAudioElement) {
+      try {
+        this.radioAudioElement.pause();
+      } catch {
+        // ignore
+      }
+    }
+    if (this.proceduralInterval) {
+      clearInterval(this.proceduralInterval);
+      this.proceduralInterval = null;
+    }
     this.notifyRadioListeners();
   }
 
@@ -842,7 +873,7 @@ class SoundManager {
     const stations = this.getRadioStations();
     this.currentStationIndex = (this.currentStationIndex + 1) % stations.length;
     this.currentTrackNumber = 1;
-    if (this.radioPlaying && !this.muted) {
+    if (this.radioPlaying) {
       this.startCurrentStation();
     }
     this.notifyRadioListeners();
@@ -854,7 +885,7 @@ class SoundManager {
     this.currentStationIndex =
       (this.currentStationIndex - 1 + stations.length) % stations.length;
     this.currentTrackNumber = 1;
-    if (this.radioPlaying && !this.muted) {
+    if (this.radioPlaying) {
       this.startCurrentStation();
     }
     this.notifyRadioListeners();
@@ -881,7 +912,7 @@ class SoundManager {
 
   private startCurrentStation() {
     this.stopAudioAndProcedural();
-    if (!this.radioPlaying || this.muted) return;
+    if (!this.radioPlaying) return;
 
     const station = this.getRadioStation();
 
@@ -908,7 +939,7 @@ class SoundManager {
 
   private tryPlayAudioFile(src: string, station: typeof this.officialStations[0], onFail: () => void) {
     const sessionId = this.playSessionId;
-    if (this.muted || !this.radioPlaying) {
+    if (!this.radioPlaying) {
       onFail();
       return;
     }
@@ -919,7 +950,7 @@ class SoundManager {
     this.radioAudioElement = audio;
 
     audio.onended = () => {
-      if (sessionId === this.playSessionId && this.radioPlaying && !this.muted) {
+      if (sessionId === this.playSessionId && this.radioPlaying) {
         this.currentTrackNumber += 1;
         this.startCurrentStation();
       }
@@ -934,7 +965,7 @@ class SoundManager {
     audio
       .play()
       .then(() => {
-        if (sessionId !== this.playSessionId || this.muted || !this.radioPlaying) {
+        if (sessionId !== this.playSessionId || !this.radioPlaying) {
           audio.pause();
           audio.currentTime = 0;
           if (this.radioAudioElement === audio) {
@@ -959,8 +990,8 @@ class SoundManager {
       ctx.resume().catch(() => {});
     }
 
-    // Play first note immediately
-    if (this.radioPlaying && !this.muted) {
+    // Play first note immediately if radio is active
+    if (this.radioPlaying) {
       this.playProceduralStep(pattern);
       this.proceduralStep = 1;
     }
@@ -968,8 +999,11 @@ class SoundManager {
     const stepTime = pattern === "samba" ? 140 : pattern === "arcade" ? 120 : 160;
 
     this.proceduralInterval = setInterval(() => {
-      if (!this.radioPlaying || this.muted) {
-        this.stopAudioAndProcedural();
+      if (!this.radioPlaying) {
+        if (this.proceduralInterval) {
+          clearInterval(this.proceduralInterval);
+          this.proceduralInterval = null;
+        }
         return;
       }
       this.playProceduralStep(pattern);
