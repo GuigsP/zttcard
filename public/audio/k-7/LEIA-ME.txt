@@ -1,0 +1,7 @@
+Coloque aqui as músicas piratas (.mp3) da Fita K7 Clandestina (Easter Egg).
+Você pode nomear como:
+1.mp3
+2.mp3
+3.mp3
+...
+O rádio vai tocar todas em sequência automaticamente, sem permitir pular faixa!

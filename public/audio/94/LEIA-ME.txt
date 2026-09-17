@@ -1,0 +1,8 @@
+Coloque aqui as músicas (.mp3) da Rádio FM 94.0 (Várzea Groove).
+Você pode nomear como:
+1.mp3
+2.mp3
+3.mp3
+4.mp3
+...
+O rádio vai tocar todas em sequência automaticamente, sem permitir pular faixa (experiência de rádio real)!

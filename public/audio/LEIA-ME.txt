@@ -1,0 +1,25 @@
+===================================================================
+📻 ZERO TO TOP (ZTT - CARD) — PASTA DE MÚSICAS DO JOGO
+===================================================================
+
+Coloque seus arquivos de áudio (.mp3) nesta pasta com os seguintes nomes:
+
+-------------------------------------------------------------------
+🎵 1. ESTAÇÕES OFICIAIS (Rádio ZTT):
+-------------------------------------------------------------------
+- menu-theme.mp3    ➔ Música da Rádio FM 94.0 (Várzea Groove / Tema Principal)
+- duel-theme.mp3    ➔ Música da Rádio FM 98.5 (Arena 90s / Música de Duelo)
+- victory-theme.mp3 ➔ Música da Rádio FM 104.2 (Clássicos Retrô / Comemoração)
+
+-------------------------------------------------------------------
+🏴‍☠️ 2. ESTAÇÕES SECRETAS (Easter Egg - Rádio Pirata):
+-------------------------------------------------------------------
+- pirate-hits-1.mp3 ➔ Música da FM 99.9 (Pirata Vol. 1 - Hits dos Anos 80)
+- pirate-hits-2.mp3 ➔ Música da FM 106.5 (Pirata Vol. 2 - Sucessos 90s)
+- pirate-hits-3.mp3 ➔ Música da FM 107.9 (Camelô 16-bit - Clássicos VIP)
+
+-------------------------------------------------------------------
+💡 DICA:
+Se algum arquivo não for colocado, o jogo toca automaticamente
+a trilha sonora retrô em 16-bit gerada por código!
+===================================================================
