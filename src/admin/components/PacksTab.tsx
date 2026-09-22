@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { DBPack, UpsertPackInput } from "@/game/cardsRepo";
 import { FOUNDER_SLUG } from "@/game/cardsRepo";
-import { getPackTheme } from "@/game/packThemes";
+import {
+  getPackTheme,
+  FRAME_STYLES,
+  BASE_NAVY_PALETTES,
+  type FrameStyle,
+  parseFrameFromDescription,
+  embedFrameInDescription,
+  setCustomFrameConfig,
+} from "@/game/packThemes";
 import { CardView } from "@/game/components/CardView";
 
 type Props = {
@@ -27,6 +35,21 @@ export function PacksTab({
 }: Props) {
   const [viewingFramePack, setViewingFramePack] = useState<DBPack | null>(null);
 
+  // Sincroniza metadados de molduras embutidos na descrição dos pacotes
+  useEffect(() => {
+    for (const p of packs) {
+      const parsed = parseFrameFromDescription(p.description);
+      if (parsed.frameConfig) {
+        setCustomFrameConfig(
+          p.slug,
+          parsed.frameConfig.frameStyle,
+          parsed.frameConfig.paletteIndex,
+          parsed.frameConfig.colors
+        );
+      }
+    }
+  }, [packs]);
+
   return (
     <div className="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-5 md:p-6 space-y-5 shadow-sm">
       
@@ -38,7 +61,7 @@ export function PacksTab({
             <span>Pacotes & Molduras Temáticas</span>
           </div>
           <div className="text-xs text-slate-400 mt-0.5">
-            Gerencie as coleções do jogo e inspecione as molduras visuais de cada época.
+            Gerencie as coleções do jogo e personalize os 5 desenhos de molduras e 3 opções de cores (base #0a0f1f).
           </div>
         </div>
         <button
@@ -57,8 +80,8 @@ export function PacksTab({
             <thead className="bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
               <tr>
                 <th className="p-3.5">Nome da Coleção</th>
-                <th className="p-3.5">Slug (Identificador)</th>
-                <th className="p-3.5 text-center">Moldura Visual</th>
+                <th className="p-3.5">Slug</th>
+                <th className="p-3.5 text-center">Moldura & Estilo</th>
                 <th className="p-3.5 text-center">Cartas</th>
                 <th className="p-3.5 text-center">Status</th>
                 <th className="p-3.5 text-center">Ordem</th>
@@ -69,6 +92,7 @@ export function PacksTab({
               {packs.map((p) => {
                 const isFounder = p.slug === FOUNDER_SLUG;
                 const theme = getPackTheme(p.slug);
+                const frameMeta = FRAME_STYLES.find((f) => f.id === theme.frameStyle) ?? FRAME_STYLES[0];
                 return (
                   <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
                     <td className="p-3.5 font-bold text-white">
@@ -103,13 +127,16 @@ export function PacksTab({
                       <button
                         type="button"
                         onClick={() => setViewingFramePack(p)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                        title="Ver moldura renderizada"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                        title="Ver moldura renderizada com desenho oficial"
                       >
-                        <span className="text-[10px] font-bold">
-                          {theme.badge ? `[ ${theme.badge} ]` : "PADRÃO"}
-                        </span>
-                        <span>👁️ Ver Moldura</span>
+                        <span className="text-sm">{frameMeta.icon}</span>
+                        <span className="text-[11px] font-bold">{frameMeta.name}</span>
+                        <div className="flex items-center gap-0.5 ml-1">
+                          <span className="w-2 h-2 rounded-full border border-black/30" style={{ backgroundColor: theme.border }} />
+                          <span className="w-2 h-2 rounded-full border border-black/30" style={{ backgroundColor: theme.topBg }} />
+                          <span className="w-2 h-2 rounded-full border border-black/30" style={{ backgroundColor: theme.accent }} />
+                        </div>
                       </button>
                     </td>
                     <td className="p-3.5 text-center font-bold text-slate-200">{counts[p.id] ?? 0}</td>
@@ -187,36 +214,72 @@ function PackEditor({
   onCancel: () => void;
   onSave: (input: UpsertPackInput) => void;
 }) {
+  const initialMeta = parseFrameFromDescription(initial.description);
+  const initialTheme = getPackTheme(initial.slug);
+
   const [name, setName] = useState(initial.name ?? "");
   const [slug, setSlug] = useState(initial.slug ?? "");
-  const [description, setDescription] = useState<string>(initial.description ?? "");
+  const [description, setDescription] = useState<string>(
+    initialMeta.cleanDescription || initial.description || ""
+  );
   const [sortOrder, setSortOrder] = useState<number>(initial.sort_order ?? 0);
   const [isActive, setIsActive] = useState<boolean>(initial.is_active ?? true);
   const [exclusiveTo, setExclusiveTo] = useState<string>(initial.exclusive_to ?? "");
   const [slugTouched, setSlugTouched] = useState(!!initial.slug);
+
+  const [frameStyle, setFrameStyle] = useState<FrameStyle>(
+    initialMeta.frameConfig?.frameStyle ?? initialTheme.frameStyle ?? "waves"
+  );
+  const [paletteIndex, setPaletteIndex] = useState<number>(
+    initialMeta.frameConfig?.paletteIndex ?? initialTheme.paletteIndex ?? 0
+  );
 
   function onNameChange(v: string) {
     setName(v);
     if (!slugTouched) setSlug(slugify(v));
   }
 
+  const cleanSlug = slugify(slug || "novo-pack");
+
+  // Atualiza cache em tempo real para o CardView renderizar a prévia imediatamente
+  useEffect(() => {
+    if (cleanSlug) {
+      setCustomFrameConfig(cleanSlug, frameStyle, paletteIndex);
+    }
+  }, [cleanSlug, frameStyle, paletteIndex]);
+
+  function handleSelectFrame(style: FrameStyle) {
+    setFrameStyle(style);
+    setCustomFrameConfig(cleanSlug, style, paletteIndex);
+  }
+
+  function handleSelectPalette(idx: number) {
+    setPaletteIndex(idx);
+    setCustomFrameConfig(cleanSlug, frameStyle, idx);
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const clean = slugify(slug);
     if (!name.trim() || !clean) return;
+
+    setCustomFrameConfig(clean, frameStyle, paletteIndex);
+    const finalDescription = embedFrameInDescription(description, frameStyle, paletteIndex);
+
     onSave({
       id: initial.id,
       name: name.trim(),
       slug: clean,
-      description: description.trim(),
+      description: finalDescription,
       sort_order: sortOrder,
       is_active: isActive,
       exclusive_to: exclusiveTo.trim() || null,
     });
   }
 
-  const cleanSlug = slugify(slug);
   const liveTheme = getPackTheme(cleanSlug);
+  const activePalette = BASE_NAVY_PALETTES[paletteIndex] || BASE_NAVY_PALETTES[0];
+  const activeFrameMeta = FRAME_STYLES.find((f) => f.id === frameStyle) || FRAME_STYLES[0];
 
   const demoCard = {
     id: "demo-editor-card",
@@ -228,22 +291,27 @@ function PackEditor({
       velocidade: 88,
       drible: 88,
     },
-    quote: `Figurinha oficial com a moldura do pacote ${name.trim() || "Novo Pack"}.`,
+    quote: `Figurinha oficial com a moldura ${activeFrameMeta.name} da coleção ${name.trim() || "Novo Pack"}.`,
     cardNumber: 10,
     packSlug: cleanSlug,
   };
 
   return (
-    <form onSubmit={submit} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 md:p-6 space-y-4 shadow-xl">
+    <form onSubmit={submit} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 md:p-6 space-y-5 shadow-2xl animate-in fade-in">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
         <div className="text-sm font-bold text-white flex items-center gap-2">
           <span>{initial.id ? "✏️" : "➕"}</span>
           <span>{initial.id ? "Editar Pacote & Moldura" : "Novo Pacote & Moldura"}</span>
         </div>
+        <span className="text-xs text-slate-400">
+          Personalize formato, desenhos e trio de cores da carta
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_270px] gap-6 items-start">
         <div className="space-y-4">
+          
+          {/* Dados Básicos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="block">
               <div className="text-xs font-semibold text-slate-300 mb-1.5">Nome do Pacote</div>
@@ -267,10 +335,113 @@ function PackEditor({
                 className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white font-mono text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 placeholder="ex: parque-sao-jorge-90"
               />
-              <div className="mt-1 text-[11px] text-slate-500">
-                Determina o tema visual da moldura (ex: parque-sao-jorge-90, copa-90, copa-94).
-              </div>
             </label>
+          </div>
+
+          {/* 🖼️ SEÇÃO 1: TROCAR DE MOLDURA (5 MODELOS DE DESENHOS) */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🖼️</span>
+                <span>Trocar de Moldura (5 Modelos com Desenhos)</span>
+              </div>
+              <span className="text-[11px] text-emerald-400 font-semibold">
+                Selecionada: {activeFrameMeta.icon} {activeFrameMeta.name}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
+              {FRAME_STYLES.map((f) => {
+                const isSelected = frameStyle === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => handleSelectFrame(f.id)}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-slate-800/90 border-emerald-500 shadow-md shadow-emerald-950/50 ring-1 ring-emerald-500"
+                        : "bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-lg">{f.icon}</span>
+                      {isSelected && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      )}
+                    </div>
+                    <div className="text-xs font-bold text-white truncate">{f.name}</div>
+                    <div className="text-[10px] text-slate-400 line-clamp-2 mt-0.5 leading-tight">
+                      {f.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 🎨 SEÇÃO 2: TROCAR DE COR (3 OPÇÕES COM 3 CORES BASEADAS EM #0a0f1f) */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🎨</span>
+                <span>Trocar de Cor (3 Cores • Base Modelo #0a0f1f)</span>
+              </div>
+              <span className="text-[11px] text-cyan-400 font-mono">
+                {activePalette.name}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              {BASE_NAVY_PALETTES.map((pal, idx) => {
+                const isSelected = paletteIndex === idx;
+                return (
+                  <button
+                    key={pal.id}
+                    type="button"
+                    onClick={() => handleSelectPalette(idx)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-slate-800/90 border-cyan-400 shadow-md shadow-cyan-950/50 ring-1 ring-cyan-400"
+                        : "bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-white">{pal.name}</span>
+                      {isSelected && (
+                        <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.2 rounded font-semibold">
+                          Ativa
+                        </span>
+                      )}
+                    </div>
+                    {/* Exibição das 3 Cores Lado a Lado */}
+                    <div className="flex items-center gap-1.5 p-1.5 bg-slate-950 rounded-lg border border-slate-800/80">
+                      <div
+                        className="flex-1 h-6 rounded flex items-center justify-center text-[8px] font-mono font-bold text-white/90 border border-white/20 shadow-inner"
+                        style={{ backgroundColor: pal.colors[0] }}
+                        title={`Cor 1 (Borda/Base): ${pal.colors[0]}`}
+                      >
+                        Borda
+                      </div>
+                      <div
+                        className="flex-1 h-6 rounded flex items-center justify-center text-[8px] font-mono font-bold text-white/90 border border-white/20 shadow-inner"
+                        style={{ backgroundColor: pal.colors[1] }}
+                        title={`Cor 2 (Topo): ${pal.colors[1]}`}
+                      >
+                        Topo
+                      </div>
+                      <div
+                        className="flex-1 h-6 rounded flex items-center justify-center text-[8px] font-mono font-bold text-slate-900 border border-white/20 shadow-inner"
+                        style={{ backgroundColor: pal.colors[2] }}
+                        title={`Cor 3 (Destaque/Accent): ${pal.colors[2]}`}
+                      >
+                        Acento
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <label className="block">
@@ -343,14 +514,45 @@ function PackEditor({
         </div>
 
         {/* Live Moldura in Editor */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center gap-3">
-          <div className="text-xs font-bold text-slate-300 text-center">
-            Prévia da Moldura
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center gap-3 sticky top-4">
+          <div className="text-xs font-bold text-slate-300 text-center flex items-center gap-1.5">
+            <span>👁️</span>
+            <span>Prévia em Tempo Real</span>
           </div>
-          <CardView card={demoCard} small />
-          <div className="text-[11px] text-slate-400 text-center space-y-1 mt-1">
-            <div>Cor da Borda: <span className="font-mono font-bold text-white">{liveTheme.border}</span></div>
-            <div>Badge no Topo: <b className="text-white">{liveTheme.badge ?? "Nenhum"}</b></div>
+
+          <div className="transform transition-transform hover:scale-105 duration-200 py-1">
+            <CardView card={demoCard} small />
+          </div>
+
+          <div className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-[11px] text-slate-400 space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span>Desenho:</span>
+              <b className="text-white flex items-center gap-1">
+                <span>{activeFrameMeta.icon}</span>
+                <span>{activeFrameMeta.name}</span>
+              </b>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Cor da Borda:</span>
+              <div className="flex items-center gap-1.5 font-mono font-bold text-white">
+                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: liveTheme.border }} />
+                <span>{liveTheme.border}</span>
+              </div>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Cor do Topo:</span>
+              <div className="flex items-center gap-1.5 font-mono font-bold text-white">
+                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: liveTheme.topBg }} />
+                <span>{liveTheme.topBg}</span>
+              </div>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Destaque/Acento:</span>
+              <div className="flex items-center gap-1.5 font-mono font-bold text-white">
+                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: liveTheme.accent }} />
+                <span>{liveTheme.accent}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -366,9 +568,9 @@ function FrameViewerModal({
   pack: DBPack;
   cardCount: number;
   onClose: () => void;
-  onClose?: () => void;
 }) {
   const theme = getPackTheme(pack.slug);
+  const frameMeta = FRAME_STYLES.find((f) => f.id === theme.frameStyle) ?? FRAME_STYLES[0];
 
   const sampleCard = {
     id: "sample-view",
@@ -380,7 +582,7 @@ function FrameViewerModal({
       velocidade: 91,
       drible: 90,
     },
-    quote: `Moldura e figurinha oficial da coleção "${pack.name}".`,
+    quote: `Moldura oficial "${frameMeta.name}" da coleção "${pack.name}".`,
     cardNumber: 10,
     packSlug: pack.slug,
   };
@@ -401,7 +603,7 @@ function FrameViewerModal({
               <span>Visualizador de Moldura Oficial</span>
             </div>
             <div className="text-xs text-slate-400 mt-0.5">
-              Pacote: <b className="text-slate-200">{pack.name}</b> (slug: <code className="font-mono text-emerald-400">{pack.slug}</code>)
+              Coleção: <b className="text-slate-200">{pack.name}</b> (slug: <code className="font-mono text-emerald-400">{pack.slug}</code>)
             </div>
           </div>
           <button
@@ -421,10 +623,17 @@ function FrameViewerModal({
         </div>
 
         {/* Moldura Specs */}
-        <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2 text-xs text-slate-300">
-          <div className="font-semibold text-slate-200 border-b border-slate-800 pb-1.5 text-xs uppercase tracking-wider">
-            Especificações Técnicas da Moldura
+        <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2.5 text-xs text-slate-300">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+            <span className="font-semibold text-slate-200 text-xs uppercase tracking-wider">
+              Especificações Técnicas da Moldura
+            </span>
+            <span className="text-emerald-400 font-bold flex items-center gap-1">
+              <span>{frameMeta.icon}</span>
+              <span>{frameMeta.name}</span>
+            </span>
           </div>
+          
           <div className="grid grid-cols-2 gap-2.5 pt-1">
             <div className="flex items-center gap-2">
               <span
@@ -440,11 +649,12 @@ function FrameViewerModal({
               />
               <span><b>Topo da Carta:</b> {theme.topBg}</span>
             </div>
-            <div>
-              <b>Badge do Topo:</b>{" "}
-              <span className="font-mono text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-white ml-1">
-                {theme.badge ?? "Nenhum"}
-              </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="w-4 h-4 rounded border border-black/40 flex-shrink-0"
+                style={{ backgroundColor: theme.accent }}
+              />
+              <span><b>Destaque/Acento:</b> {theme.accent}</span>
             </div>
             <div>
               <b>Total de Cartas:</b> <span className="text-white font-bold">{cardCount}</span>
