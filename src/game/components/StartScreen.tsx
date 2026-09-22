@@ -3,6 +3,14 @@ import { useState, useEffect } from "react";
 import type { Difficulty, LastResult } from "../types";
 import { DIFFICULTY_LABELS } from "../types";
 import { CUP_PACKS, getPackTheme, type PackTheme } from "../packThemes";
+import {
+  listPacks,
+  getCachedPacks,
+  canCurrentPlayerAccessPack,
+  isPackExclusive,
+  grantExclusiveCardsToOwner,
+  type DBPack,
+} from "../cardsRepo";
 import { OnlineBadge } from "../multiplayer/OnlineBadge";
 import {
   canClaimDailyFree,
@@ -11,6 +19,7 @@ import {
   getPlayerWallet,
 } from "../economy/economyService";
 import { getMasterCatalog } from "../economy/cardCatalog";
+import { getPlayerLevel } from "../playerLevel";
 import { sound } from "../audio";
 import { RetroBoombox } from "./RetroBoombox";
 
@@ -48,7 +57,27 @@ export function StartScreen({
   const [gameStep, setGameStep] = useState<GameStep>("select_mode");
   const [selectedPack, setSelectedPack] = useState<string>(initialPack);
 
+  const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => {
+    return getCachedPacks().filter(
+      (p) => p.is_active && p.slug !== "founder" && p.slug !== "fundador" && canCurrentPlayerAccessPack(p)
+    );
+  });
+
+  useEffect(() => {
+    grantExclusiveCardsToOwner();
+    listPacks().then((all) => {
+      const filtered = all.filter(
+        (p) => p.is_active && p.slug !== "founder" && p.slug !== "fundador" && canCurrentPlayerAccessPack(p)
+      );
+      if (filtered.length > 0) {
+        setAvailablePacks(filtered);
+      }
+      grantExclusiveCardsToOwner();
+    });
+  }, []);
+
   const wallet = getPlayerWallet();
+  const playerLevel = getPlayerLevel();
   const inventory = getPlayerInventory();
   const catalog = getMasterCatalog();
   const duplicates = getDuplicatesList();
@@ -82,7 +111,7 @@ export function StartScreen({
           {/* Wallet Badge */}
           <div
             onClick={() => selectSection("carteira")}
-            className="cursor-pointer bg-arcade-blue/70 border-2 border-arcade-yellow p-3 mb-6 flex items-center justify-between hover:bg-arcade-blue transition-colors shadow"
+            className="cursor-pointer bg-arcade-blue/70 border-2 border-arcade-yellow p-2.5 mb-3 flex items-center justify-between hover:bg-arcade-blue transition-colors shadow"
           >
             <div className="flex items-center gap-2">
               <span className="text-2xl animate-bounce">🪙</span>
@@ -98,6 +127,30 @@ export function StartScreen({
             <span className="font-arcade text-[9px] text-arcade-yellow/80">
               VER ➔
             </span>
+          </div>
+
+          {/* Level & XP Card */}
+          <div className="bg-arcade-blue/40 border-2 border-arcade-yellow/60 p-2.5 mb-6 shadow">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm">⭐</span>
+                <span className="font-arcade text-[10px] text-arcade-yellow font-bold">
+                  NÍVEL {playerLevel.level}
+                </span>
+              </div>
+              <span className="font-arcade text-[8px] text-arcade-cream/70">
+                {playerLevel.xp} XP
+              </span>
+            </div>
+            <div className="font-arcade text-[8px] text-arcade-cream/90 mb-1.5 truncate">
+              {playerLevel.title}
+            </div>
+            <div className="w-full bg-black/60 h-1.5 rounded-full overflow-hidden border border-arcade-yellow/30">
+              <div
+                className="bg-gradient-to-r from-arcade-yellow to-amber-500 h-full transition-all duration-300"
+                style={{ width: `${playerLevel.progressPercent}%` }}
+              />
+            </div>
           </div>
 
           {/* Navigation Items */}
@@ -189,15 +242,18 @@ export function StartScreen({
                         sound.playAttrSelect();
                         setGameStep("config_ai");
                       }}
-                      className="group bg-arcade-cream text-arcade-dark border-4 border-arcade-dark hover:border-arcade-yellow hover:bg-arcade-yellow shadow-arcade p-6 text-left transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px]"
+                      className="group bg-arcade-cream text-arcade-dark border-4 border-arcade-dark hover:border-arcade-yellow hover:bg-arcade-yellow shadow-arcade p-6 text-left transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative"
                     >
+                      <div className="absolute top-3 right-3 font-arcade text-[8px] bg-red-900 text-white px-2 py-0.5 border border-arcade-yellow">
+                        IA LV. {playerLevel.level}
+                      </div>
                       <div>
                         <div className="font-arcade text-xl text-arcade-red group-hover:text-arcade-dark flex items-center justify-between mb-2">
                           <span>🤖 VS COMPUTADOR</span>
                           <span className="text-2xl">⚽</span>
                         </div>
                         <p className="font-body text-xs text-arcade-dark/90 leading-relaxed">
-                          Partida solo contra a IA. Escolha a copa, a dificuldade e ganhe <b>ZTT$</b> a cada vitória!
+                          Partida solo contra a IA adaptativa. Ela aprende com suas jogadas, calibra ao seu nível e rende <b>ZTT$</b> a cada vitória!
                         </p>
                       </div>
                       <div className="font-arcade text-[10px] text-arcade-red group-hover:text-arcade-dark mt-3 font-bold">
@@ -254,30 +310,53 @@ export function StartScreen({
                     </div>
                   )}
 
-                  {/* Seleção de Pacote de Copa */}
+                  {/* Card Informativo de Calibração da IA */}
+                  <div className="bg-arcade-blue/40 border border-arcade-yellow/60 p-3 text-left">
+                    <div className="flex items-center gap-1.5 font-arcade text-[9px] text-arcade-yellow mb-1">
+                      <span>🧠</span>
+                      <span>IA TÁTICA COM MEMÓRIA NO SUPABASE</span>
+                    </div>
+                    <p className="font-body text-[11px] text-arcade-cream/90 leading-relaxed">
+                      A máquina calibra sua inteligência ao seu <b>Nível {playerLevel.level} ({playerLevel.title})</b>. Conforme você sobe na carreira, ela joga mais pesado, antecipa seus descartes e reage com falas retrô provocadoras!
+                    </p>
+                  </div>
+
+                  {/* Seleção de Pacote de Copa ou Exclusivo */}
                   <div>
                     <div className="font-arcade text-[10px] text-arcade-yellow mb-1">
-                      1. ESCOLHA A COPA
+                      1. ESCOLHA O BARALHO / COPA
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {CUP_PACKS.map((t) => (
-                        <button
-                          key={t.slug}
-                          type="button"
-                          onClick={() => {
-                            sound.playAttrSelect();
-                            setSelectedPack(t.slug);
-                          }}
-                          className={`p-2 border-2 text-center transition-all ${
-                            selectedPack === t.slug
-                              ? "bg-arcade-yellow text-arcade-dark border-arcade-cream scale-105 shadow"
-                              : "bg-arcade-blue text-arcade-cream border-arcade-yellow/50 hover:bg-arcade-blue/80"
-                          }`}
-                        >
-                          <div className="font-arcade text-xs">{t.badge ?? "90"}</div>
-                          <div className="font-arcade text-[9px] mt-0.5 truncate">{t.label}</div>
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {availablePacks.map((p) => {
+                        const t = getPackTheme(p.slug);
+                        const isExcl = isPackExclusive(p);
+                        const isSelected = selectedPack === p.slug;
+                        return (
+                          <button
+                            key={p.slug}
+                            type="button"
+                            onClick={() => {
+                              sound.playAttrSelect();
+                              setSelectedPack(p.slug);
+                            }}
+                            className={`p-2 border-2 text-center transition-all relative ${
+                              isSelected
+                                ? "bg-arcade-yellow text-arcade-dark border-arcade-cream scale-105 shadow"
+                                : "bg-arcade-blue text-arcade-cream border-arcade-yellow/50 hover:bg-arcade-blue/80"
+                            }`}
+                          >
+                            {isExcl && (
+                              <div className="absolute -top-2 -right-1 font-arcade text-[7px] bg-amber-500 text-arcade-dark px-1.5 py-0.2 border border-black rounded-full font-bold shadow">
+                                ⭐ EXCLUSIVO
+                              </div>
+                            )}
+                            <div className="font-arcade text-xs">{t.badge ?? "90"}</div>
+                            <div className="font-arcade text-[9px] mt-0.5 truncate font-bold">
+                              {p.name}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

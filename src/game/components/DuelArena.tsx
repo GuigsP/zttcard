@@ -53,10 +53,34 @@ export function DuelArena({
     <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[220px_1fr_220px] items-start justify-items-center gap-4 md:gap-6 px-4 py-2">
       {/* AI side (Left) */}
       <div className="flex flex-col items-center gap-2 w-full">
-        <div className="font-arcade text-[10px] text-arcade-red flex items-center gap-1">
-          <span>🤖</span>
-          <span>ADVERSÁRIO (IA)</span>
+        <div className="flex flex-col items-center gap-0.5">
+          <div className="font-arcade text-[10px] text-arcade-red flex items-center gap-1">
+            <span>🤖</span>
+            <span>ADVERSÁRIO (IA)</span>
+          </div>
+          <span className="font-arcade text-[8px] px-1.5 py-0.5 bg-red-950/80 text-red-300 border border-red-700/60 rounded">
+            {state.playerLevel <= 5
+              ? "MODO TREINO (LV. 1-5)"
+              : state.playerLevel <= 15
+                ? `TÁTICA ADAPTATIVA (LV. ${state.playerLevel})`
+                : state.playerLevel <= 25
+                  ? `PREDIÇÃO AVANÇADA (LV. ${state.playerLevel})`
+                  : `🔥 MODO MESTRE (LV. ${state.playerLevel})`}
+          </span>
         </div>
+
+        {state.aiSpeech && (
+          <div className="w-full max-w-[220px] bg-arcade-dark/95 border-2 border-arcade-red text-arcade-cream rounded px-2.5 py-1.5 shadow-arcade text-center relative animate-fade-in">
+            <div className="font-arcade text-[8px] text-arcade-red/90 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-1">
+              <span>💬</span>
+              <span>IA PROVOCADORA</span>
+            </div>
+            <div className="font-body text-[11px] leading-tight text-arcade-cream font-medium">
+              "{state.aiSpeech}"
+            </div>
+          </div>
+        )}
+
         <CardView
           card={aiCard}
           faceDown={aiFaceDown || !aiCard}
@@ -185,9 +209,14 @@ export function DuelArena({
 
       {/* Player side (Right) */}
       <div className="flex flex-col items-center gap-2 w-full">
-        <div className="font-arcade text-[10px] text-arcade-yellow flex items-center gap-1">
-          <span>⭐</span>
-          <span>SUA CARTA (VOCÊ)</span>
+        <div className="flex flex-col items-center gap-0.5">
+          <div className="font-arcade text-[10px] text-arcade-yellow flex items-center gap-1">
+            <span>⭐</span>
+            <span>SUA CARTA (VOCÊ)</span>
+          </div>
+          <span className="font-arcade text-[8px] px-1.5 py-0.5 bg-yellow-950/80 text-arcade-yellow border border-yellow-700/60 rounded">
+            SEU NÍVEL: {state.playerLevel}
+          </span>
         </div>
         <CardView
           card={pCard}

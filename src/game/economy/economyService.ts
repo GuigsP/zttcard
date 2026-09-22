@@ -1,5 +1,6 @@
 import { readJSON, writeJSON } from "../storage";
 import { getMasterCatalog, getCardById } from "./cardCatalog";
+import { checkIsCardExclusive } from "../cardsRepo";
 import type {
   CardRarity,
   CatalogCard,
@@ -128,12 +129,20 @@ export function removeDuplicateCard(cardId: string): boolean {
   return true;
 }
 
-export function sellDuplicateCard(cardId: string): { success: boolean; earnedCoins: number } {
+export function sellDuplicateCard(cardId: string): { success: boolean; earnedCoins: number; error?: string } {
+  if (checkIsCardExclusive(cardId)) {
+    return {
+      success: false,
+      earnedCoins: 0,
+      error: "Figurinhas exclusivas de apoiadores não podem ser vendidas!",
+    };
+  }
+
   const card = getCardById(cardId);
-  if (!card) return { success: false, earnedCoins: 0 };
+  if (!card) return { success: false, earnedCoins: 0, error: "Figurinha não encontrada." };
 
   const removed = removeDuplicateCard(cardId);
-  if (!removed) return { success: false, earnedCoins: 0 };
+  if (!removed) return { success: false, earnedCoins: 0, error: "Não é possível vender a única cópia do álbum." };
 
   addCoins(card.marketValue);
   return { success: true, earnedCoins: card.marketValue };
@@ -187,11 +196,14 @@ export function canClaimDailyFree(): { canClaim: boolean; msRemaining: number } 
   return { canClaim: false, msRemaining: DAY_MS - elapsed };
 }
 
-// Drop rate draw algorithm
+// Drop rate draw algorithm (Blindagem: cartas exclusivas nunca caem em pacotes comuns da banca)
 function drawRandomCard(guaranteedRarity?: CardRarity): CatalogCard {
-  const catalog = getMasterCatalog();
+  const allCards = getMasterCatalog();
+  const catalog = allCards.filter((c) => !checkIsCardExclusive(c.id));
+  const poolBase = catalog.length > 0 ? catalog : allCards;
+
   if (guaranteedRarity) {
-    const pool = catalog.filter((c) => c.rarity === guaranteedRarity);
+    const pool = poolBase.filter((c) => c.rarity === guaranteedRarity);
     if (pool.length > 0) {
       return pool[Math.floor(Math.random() * pool.length)];
     }
@@ -204,11 +216,11 @@ function drawRandomCard(guaranteedRarity?: CardRarity): CatalogCard {
   else if (roll < 45) targetRarity = "INCOMUM"; // 27%
   else targetRarity = "COMUM"; // 55%
 
-  const pool = catalog.filter((c) => c.rarity === targetRarity);
+  const pool = poolBase.filter((c) => c.rarity === targetRarity);
   if (pool.length > 0) {
     return pool[Math.floor(Math.random() * pool.length)];
   }
-  return catalog[Math.floor(Math.random() * catalog.length)];
+  return poolBase[Math.floor(Math.random() * poolBase.length)];
 }
 
 export function openPack(packId: string): {
@@ -313,6 +325,13 @@ export function createTradeListing(
   priceCoins: number | null,
   requestedCardId: string | null = null,
 ): { success: boolean; error?: string } {
+  if (checkIsCardExclusive(offeredCardId)) {
+    return {
+      success: false,
+      error: "Figurinhas exclusivas de apoiadores não podem ser trocadas ou anunciadas no mercado!",
+    };
+  }
+
   // Verify seller actually owns at least 2 copies (only duplicates can be listed)
   const inv = getPlayerInventory();
   if ((inv[offeredCardId] ?? 0) < 2) {

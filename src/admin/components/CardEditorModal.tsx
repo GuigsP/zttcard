@@ -52,7 +52,16 @@ export function CardEditorModal({
   const attrKeys = useMemo(() => attrsForPosition(position), [position]);
   const [attrs, setAttrs] = useState<Record<string, number>>(() => {
     const base = { ...(initial.attrs ?? {}) } as Record<string, number>;
-    for (const k of attrsForPosition((initial.position as Position) ?? "GOL")) {
+    const pos = (initial.position as Position) ?? "GOL";
+    if (pos === "GOL") {
+      if (base.posicionamento == null && base.passe != null) base.posicionamento = base.passe;
+      if (base.reflexo == null && base.fisico != null) base.reflexo = base.fisico;
+    } else if (pos === "VOL") {
+      if (base.conducao == null && base.criacao != null) base.conducao = base.criacao;
+    } else if (pos === "M10") {
+      if (base.finalizacao == null && base.defesa != null) base.finalizacao = Math.min(99, base.defesa + 10);
+    }
+    for (const k of attrsForPosition(pos)) {
       if (base[k] == null) base[k] = 80;
     }
     return base;
@@ -62,12 +71,36 @@ export function CardEditorModal({
   useEffect(() => {
     setAttrs((prev) => {
       const updated: Record<string, number> = {};
-      for (const k of attrKeys) {
-        updated[k] = prev[k] ?? 80;
+      if (position === "GOL") {
+        updated.defesa = prev.defesa ?? 80;
+        updated.posicionamento = prev.posicionamento ?? prev.passe ?? 80;
+        updated.reflexo = prev.reflexo ?? prev.fisico ?? 80;
+      } else if (position === "VOL") {
+        updated.conducao = prev.conducao ?? prev.criacao ?? 80;
+        updated.passe = prev.passe ?? prev.posicionamento ?? 80;
+        updated.defesa = prev.defesa ?? 80;
+      } else if (position === "M10") {
+        updated.criacao = prev.criacao ?? prev.conducao ?? 80;
+        updated.passe = prev.passe ?? prev.posicionamento ?? 80;
+        updated.finalizacao = prev.finalizacao ?? (prev.defesa != null ? Math.min(99, prev.defesa + 10) : 80);
+      } else {
+        for (const k of attrKeys) {
+          if (k === "criacao" && prev.conducao != null && prev.criacao == null) {
+            updated.criacao = prev.conducao;
+          } else if (k === "passe" && prev.posicionamento != null && prev.passe == null) {
+            updated.passe = prev.posicionamento;
+          } else if (k === "defesa" && prev.finalizacao != null && prev.defesa == null) {
+            updated.defesa = Math.max(0, prev.finalizacao - 10);
+          } else if (k === "fisico" && prev.reflexo != null && prev.fisico == null) {
+            updated.fisico = prev.reflexo;
+          } else {
+            updated[k] = prev[k] ?? 80;
+          }
+        }
       }
       return updated;
     });
-  }, [attrKeys]);
+  }, [attrKeys, position]);
 
   // Overall (OVR) ponderado
   const ovr = useMemo(() => {
@@ -271,7 +304,7 @@ export function CardEditorModal({
                       className="w-3 h-3 rounded-full border border-black/40"
                       style={{ backgroundColor: theme.border }}
                     />
-                    <span>{active ? "✓ " : ""}{p.name}</span>
+                    <span>{active ? "✓ " : ""}{p.name}{!p.is_active ? " 🔒(Oculto)" : ""}</span>
                   </button>
                 );
               })}

@@ -8,11 +8,11 @@
     "name": "tone",
     "real_name": "Neto",
     "card_number": 102,
-    "ovr": 73,
+    "ovr": 76,
     "attrs": {
       "criacao": 96,
       "passe": 82,
-      "defesa": 40
+      "finalizacao": 50
     },
     "quote": "Falta na entrada da área é meio gol pro xodó da Fiel!",
     "pack_ids": [
@@ -32,8 +32,8 @@
     "ovr": 88,
     "attrs": {
       "defesa": 92,
-      "fisico": 88,
-      "passe": 78
+      "posicionamento": 78,
+      "reflexo": 88
     },
     "quote": "Fechou o gol no Morumbi e garantiu o primeiro título brasileiro.",
     "pack_ids": [
@@ -53,8 +53,8 @@
     "ovr": 70,
     "attrs": {
       "defesa": 79,
-      "passe": 74,
-      "fisico": 58
+      "posicionamento": 74,
+      "reflexo": 58
     },
     "quote": "O terror dos roupeiros, devolvia uniforme cheirando a amaciante.",
     "pack_ids": [
@@ -173,7 +173,7 @@
     "card_number": 118,
     "ovr": 82,
     "attrs": {
-      "criacao": 81,
+      "conducao": 81,
       "passe": 86,
       "defesa": 79
     },
@@ -193,7 +193,7 @@
     "card_number": 119,
     "ovr": 70,
     "attrs": {
-      "criacao": 54,
+      "conducao": 54,
       "passe": 73,
       "defesa": 82
     },
@@ -211,11 +211,11 @@
     "name": "Patuzinho",
     "real_name": "Tupazinho",
     "card_number": 121,
-    "ovr": 77,
+    "ovr": 81,
     "attrs": {
       "criacao": 89,
       "passe": 85,
-      "defesa": 58
+      "finalizacao": 68
     },
     "quote": "Drible curto e chegada rápida na linha de fundo.",
     "pack_ids": [
@@ -277,8 +277,8 @@
     "ovr": 94,
     "attrs": {
       "defesa": 96,
-      "fisico": 90,
-      "passe": 82
+      "posicionamento": 82,
+      "reflexo": 90
     },
     "quote": "Sai que é sua, Taffarel! Pega até pensamento em disputa de pênalti.",
     "pack_ids": [
@@ -300,8 +300,8 @@
     "ovr": 94,
     "attrs": {
       "defesa": 95,
-      "fisico": 93,
-      "passe": 81
+      "posicionamento": 81,
+      "reflexo": 93
     },
     "quote": "Goleiro de gelo que defendeu dois pênaltis de Raí no mesmo jogo.",
     "pack_ids": [
@@ -321,8 +321,8 @@
     "ovr": 86,
     "attrs": {
       "defesa": 88,
-      "fisico": 84,
-      "passe": 79
+      "posicionamento": 79,
+      "reflexo": 84
     },
     "quote": "Bicampeão da Libertadores e elasticidade pura debaixo da trave.",
     "pack_ids": [
@@ -452,9 +452,9 @@
     "card_number": 209,
     "ovr": 92,
     "attrs": {
-      "defesa": 94,
-      "fisico": 93,
-      "passe": 88
+      "conducao": 80,
+      "passe": 88,
+      "defesa": 94
     },
     "quote": "Ergueu a taça de 94 com sangue nos olhos e liderança absoluta.",
     "pack_ids": [
@@ -475,9 +475,9 @@
     "card_number": 210,
     "ovr": 88,
     "attrs": {
-      "defesa": 91,
-      "fisico": 89,
-      "passe": 83
+      "conducao": 80,
+      "passe": 83,
+      "defesa": 91
     },
     "quote": "O cão de guarda da meia cancha no Tetra de 94.",
     "pack_ids": [
@@ -495,10 +495,9 @@
     "card_number": 211,
     "ovr": 82,
     "attrs": {
+      "conducao": 82,
       "passe": 85,
-      "drible": 82,
-      "defesa": 79,
-      "fisico": 81
+      "defesa": 79
     },
     "quote": "Drible curto, passes rápidos e cambalhota na rampa!",
     "pack_ids": [
@@ -538,9 +537,8 @@
     "ovr": 96,
     "attrs": {
       "criacao": 97,
-      "finalizacao": 96,
       "passe": 95,
-      "drible": 93
+      "finalizacao": 96
     },
     "quote": "Melhor do mundo em 1999 e decisivo em todas as fases da Copa.",
     "pack_ids": [
@@ -752,11 +750,11 @@
     "name": "Abner",
     "real_name": "Vágner",
     "card_number": 127,
-    "ovr": 51,
+    "ovr": 55,
     "attrs": {
       "criacao": 60,
       "passe": 53,
-      "defesa": 41
+      "finalizacao": 51
     },
     "quote": "",
     "pack_ids": [
@@ -815,8 +813,8 @@
     "ovr": 54,
     "attrs": {
       "defesa": 63,
-      "passe": 56,
-      "fisico": 44
+      "posicionamento": 56,
+      "reflexo": 44
     },
     "quote": "Quando precisar estarei aqui",
     "pack_ids": [
@@ -835,8 +833,8 @@
     "ovr": 83,
     "attrs": {
       "defesa": 93,
-      "passe": 88,
-      "fisico": 68
+      "posicionamento": 88,
+      "reflexo": 68
     },
     "quote": "Fiel debaixo das traves: jogou todas, defendeu até vento e ainda saiu sem tomar cartão.",
     "pack_ids": [
@@ -972,11 +970,11 @@
     "name": "veto",
     "real_name": "Neto",
     "card_number": 115,
-    "ovr": 88,
+    "ovr": 91,
     "attrs": {
       "criacao": 95,
       "passe": 93,
-      "defesa": 75
+      "finalizacao": 85
     },
     "quote": "Cobranças de falta mortais e o maestro do primeiro título nacional.",
     "pack_ids": [
@@ -995,7 +993,7 @@
     "card_number": 117,
     "ovr": 80,
     "attrs": {
-      "criacao": 80,
+      "conducao": 80,
       "passe": 78,
       "defesa": 82
     },
@@ -1015,7 +1013,7 @@
     "card_number": 120,
     "ovr": 66,
     "attrs": {
-      "criacao": 51,
+      "conducao": 51,
       "passe": 69,
       "defesa": 79
     },
@@ -1033,11 +1031,11 @@
     "name": "talismã",
     "real_name": "Tupãzinho",
     "card_number": 122,
-    "ovr": 87,
+    "ovr": 90,
     "attrs": {
       "criacao": 90,
       "passe": 90,
-      "defesa": 81
+      "finalizacao": 91
     },
     "quote": "O gol do título de carrinho que eternizou o Talismã da Fiel.",
     "pack_ids": [

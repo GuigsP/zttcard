@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { listFeedback, deleteFeedback } from "@/lib/feedback.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 type FeedbackRow = {
   id: string;
@@ -18,14 +17,18 @@ export function FeedbackTab() {
   const [err, setErr] = useState<string | null>(null);
   const [filter, setFilter] = useState<"ALL" | "up" | "down">("ALL");
   const [busy, setBusy] = useState(false);
-  const list = useServerFn(listFeedback);
-  const del = useServerFn(deleteFeedback);
 
   async function refresh() {
     setErr(null);
     try {
-      const res = await list();
-      setItems((res.items ?? []) as FeedbackRow[]);
+      const { data, error } = await supabase
+        .from("feedback")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      if (error) throw new Error(error.message);
+      setItems((data ?? []) as FeedbackRow[]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Erro ao carregar feedbacks.");
     }
@@ -39,7 +42,8 @@ export function FeedbackTab() {
     if (!confirm("Apagar este feedback?")) return;
     setBusy(true);
     try {
-      await del({ data: { id } });
+      const { error } = await supabase.from("feedback").delete().eq("id", id);
+      if (error) throw new Error(error.message);
       await refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Erro ao apagar.");

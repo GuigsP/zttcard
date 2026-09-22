@@ -85,6 +85,18 @@ export function PacksTab({
                           </span>
                         )}
                       </div>
+                      <div className="mt-1">
+                        {p.exclusive_to ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-300 bg-amber-950/80 border border-amber-500/40 px-2 py-0.5 rounded-full">
+                            <span>⭐ Exclusivo:</span>
+                            <b className="text-white font-mono">{p.exclusive_to}</b>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded">
+                            Público (Todos)
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-3.5 font-mono text-slate-400 text-xs">{p.slug}</td>
                     <td className="p-3.5 text-center">
@@ -180,6 +192,7 @@ function PackEditor({
   const [description, setDescription] = useState<string>(initial.description ?? "");
   const [sortOrder, setSortOrder] = useState<number>(initial.sort_order ?? 0);
   const [isActive, setIsActive] = useState<boolean>(initial.is_active ?? true);
+  const [exclusiveTo, setExclusiveTo] = useState<string>(initial.exclusive_to ?? "");
   const [slugTouched, setSlugTouched] = useState(!!initial.slug);
 
   function onNameChange(v: string) {
@@ -198,6 +211,7 @@ function PackEditor({
       description: description.trim(),
       sort_order: sortOrder,
       is_active: isActive,
+      exclusive_to: exclusiveTo.trim() || null,
     });
   }
 
@@ -290,6 +304,25 @@ function PackEditor({
                 <option value="0">Não (Oculto)</option>
               </select>
             </label>
+          </div>
+
+          {/* Seção de Exclusividade para Apoiadores Financeiros */}
+          <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3.5 space-y-2">
+            <label className="block">
+              <div className="text-xs font-semibold text-amber-300 flex items-center gap-1.5 mb-1">
+                <span>⭐</span>
+                <span>Apoiador Financeiro Exclusivo (E-mail ou Nickname)</span>
+              </div>
+              <input
+                value={exclusiveTo}
+                onChange={(e) => setExclusiveTo(e.target.value)}
+                className="w-full bg-slate-900 border border-amber-500/40 hover:border-amber-400 text-amber-200 placeholder-slate-500 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                placeholder="Ex: apoiador@gmail.com ou NicknameDoApoiador (vazio = pacote público para todos)"
+              />
+            </label>
+            <div className="text-[11px] text-amber-200/70 leading-relaxed">
+              🔒 <b>Regras Automáticas de Exclusividade:</b> Se preenchido, <b>apenas</b> este jogador terá acesso ao baralho. Suas cartas <b>nunca</b> sairão em pacotes da banca, <b>não</b> poderão ser vendidas e <b>não</b> poderão ser negociadas no mercado.
+            </div>
           </div>
 
           <div className="flex gap-2.5 pt-2">

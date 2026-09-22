@@ -1,4 +1,5 @@
 import { getPlayerWallet } from "../economy/economyService";
+import { getPlayerLevel } from "../playerLevel";
 import { sound } from "../audio";
 
 type Props = {
@@ -17,6 +18,7 @@ export function EconomyHeader({
   onHome,
 }: Props) {
   const wallet = getPlayerWallet();
+  const playerLevel = getPlayerLevel();
 
   return (
     <header className="w-full bg-arcade-dark border-b-4 border-arcade-yellow px-3 py-2 flex flex-wrap items-center justify-between gap-2 shadow-arcade z-20">
@@ -37,6 +39,26 @@ export function EconomyHeader({
           <span className="font-arcade text-xs text-arcade-yellow font-bold tracking-wider">
             ZTT$ {wallet.coins.toLocaleString()}
           </span>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 bg-arcade-blue/40 px-2.5 py-1 border border-arcade-yellow/60 rounded-sm">
+          <span className="text-sm">⭐</span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="font-arcade text-[9px] text-arcade-yellow font-bold">
+                NV. {playerLevel.level}
+              </span>
+              <span className="font-arcade text-[8px] text-arcade-cream/70">
+                {playerLevel.title}
+              </span>
+            </div>
+            <div className="w-20 bg-black/60 h-1 rounded-full overflow-hidden mt-0.5 border border-arcade-yellow/30">
+              <div
+                className="bg-arcade-yellow h-full transition-all duration-300"
+                style={{ width: `${playerLevel.progressPercent}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

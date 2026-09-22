@@ -37,11 +37,16 @@ export const POSITION_SHORT: Record<Position, string> = {
 
 export type AttrKey =
   | "passe" | "defesa" | "fisico"
+  | "posicionamento" | "reflexo"
+  | "conducao"
   | "criacao" | "finalizacao" | "velocidade" | "drible";
 
 export const ATTR_LABELS: Record<AttrKey, string> = {
-  passe: "PASSE",
   defesa: "DEFESA",
+  posicionamento: "POSICIONAMENTO",
+  reflexo: "REFLEXO",
+  conducao: "CONDUÇÃO",
+  passe: "PASSE",
   fisico: "FÍSICO",
   criacao: "CRIAÇÃO",
   finalizacao: "FINALIZAÇÃO",
@@ -109,9 +114,15 @@ export type LastResult = {
 // Canonical order used both on the card and on the attribute buttons.
 // Keeping a single source of truth prevents "botões em ordem invertida à carta".
 export function attrsForPosition(pos: Position): AttrKey[] {
-  if (["GOL", "LD", "ZAD", "ZAE", "LE"].includes(pos))
+  if (pos === "GOL")
+    return ["defesa", "posicionamento", "reflexo"];
+  if (pos === "VOL")
+    return ["conducao", "passe", "defesa"];
+  if (pos === "M10")
+    return ["criacao", "passe", "finalizacao"];
+  if (["LD", "ZAD", "ZAE", "LE"].includes(pos))
     return ["defesa", "passe", "fisico"];
-  if (["VOL", "M8", "M10"].includes(pos))
+  if (pos === "M8")
     return ["criacao", "passe", "defesa"];
   return ["finalizacao", "drible", "velocidade"];
 }

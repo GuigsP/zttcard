@@ -256,23 +256,34 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2 pt-2 border-t border-arcade-yellow/30">
-                      <button
-                        onClick={() => handleSellDuplicate(card.id)}
-                        className="w-full font-arcade text-[9px] py-2 bg-arcade-green text-arcade-cream border-2 border-arcade-dark hover:bg-arcade-yellow hover:text-arcade-dark transition-all flex items-center justify-center gap-1"
-                      >
-                        <span>🪙</span>
-                        <span>VENDER (+{sellPrice})</span>
-                      </button>
+                      {card.isExclusive ? (
+                        <div className="bg-amber-950/80 border border-amber-500/50 p-2 text-center rounded">
+                          <span className="font-arcade text-[8px] text-amber-300 flex items-center justify-center gap-1">
+                            <span>⭐</span>
+                            <span>FIGURINHA EXCLUSIVA DE APOIADOR (NÃO NEGOCIÁVEL)</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleSellDuplicate(card.id)}
+                            className="w-full font-arcade text-[9px] py-2 bg-arcade-green text-arcade-cream border-2 border-arcade-dark hover:bg-arcade-yellow hover:text-arcade-dark transition-all flex items-center justify-center gap-1"
+                          >
+                            <span>🪙</span>
+                            <span>VENDER (+{sellPrice})</span>
+                          </button>
 
-                      <button
-                        onClick={() => {
-                          setListingCardId(card.id);
-                          setListingPrice(sellPrice);
-                        }}
-                        className="w-full font-arcade text-[9px] py-2 bg-arcade-blue text-arcade-cream border-2 border-arcade-yellow hover:bg-arcade-yellow hover:text-arcade-dark transition-all"
-                      >
-                        🎪 ANUNCIAR NA FEIRA
-                      </button>
+                          <button
+                            onClick={() => {
+                              setListingCardId(card.id);
+                              setListingPrice(sellPrice);
+                            }}
+                            className="w-full font-arcade text-[9px] py-2 bg-arcade-blue text-arcade-cream border-2 border-arcade-yellow hover:bg-arcade-yellow hover:text-arcade-dark transition-all"
+                          >
+                            🎪 ANUNCIAR NA FEIRA
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -452,7 +463,7 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full my-3 max-h-60 overflow-y-auto">
-                {duplicates.map(({ card }) => (
+                {duplicates.filter(({ card }) => !card.isExclusive).map(({ card }) => (
                   <button
                     key={card.id}
                     onClick={() => setP2pSelectedMyCard(card.id)}

@@ -54,6 +54,14 @@ export function AlbumView({ onBack, onOpenShop }: Props) {
             <div className="font-arcade text-xs text-arcade-red mb-1">
               FIGURINHA #{selectedCard.slotNumber}
             </div>
+            {selectedCard.isExclusive && (
+              <div className="mb-1.5">
+                <span className="font-arcade text-[8px] bg-amber-500/20 text-amber-300 border border-amber-500/60 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <span>⭐</span>
+                  <span>COLEÇÃO EXCLUSIVA DE APOIADOR</span>
+                </span>
+              </div>
+            )}
             <div className="font-arcade text-xl text-arcade-yellow mb-1">
               {selectedCard.name}
             </div>

@@ -8,6 +8,8 @@ export function RetroBoombox() {
   const [volume, setVolume] = useState(sound.getVolume());
   const [isTapeMode, setIsTapeMode] = useState(sound.getIsPirateMode());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [playbackTime, setPlaybackTime] = useState(sound.getCurrentPlaybackTime());
+  const [trackNumber, setTrackNumber] = useState(sound.getCurrentTrackNumber());
 
   useEffect(() => {
     const unsubscribe = sound.subscribeRadio(() => {
@@ -16,9 +18,26 @@ export function RetroBoombox() {
       setIsMuted(sound.isMuted());
       setVolume(sound.getVolume());
       setIsTapeMode(sound.getIsPirateMode());
+      setPlaybackTime(sound.getCurrentPlaybackTime());
+      setTrackNumber(sound.getCurrentTrackNumber());
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      setPlaybackTime(sound.getCurrentPlaybackTime());
+      setTrackNumber(sound.getCurrentTrackNumber());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  function formatSeconds(sec: number): string {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -144,17 +163,26 @@ export function RetroBoombox() {
             <span
               className={`w-1.5 h-1.5 rounded-full ${
                 isPlaying
-                  ? "bg-arcade-green shadow-[0_0_6px_#00ff66]"
+                  ? "bg-arcade-green shadow-[0_0_6px_#00ff66] animate-pulse"
                   : "bg-zinc-600"
               }`}
             />
             <span className="font-bold text-arcade-yellow">
               {station.freq} MHz
             </span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-arcade-green font-bold tabular-nums">
+              {formatSeconds(playbackTime.current)}
+            </span>
           </div>
-          <span className="text-zinc-300 font-bold truncate max-w-[125px]">
-            {station.title}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-amber-400 font-bold text-[7px] bg-amber-950/70 px-1 py-0.2 rounded border border-amber-800/50">
+              FAIXA {trackNumber.toString().padStart(2, "0")}
+            </span>
+            <span className="text-zinc-300 font-bold truncate max-w-[100px]">
+              {station.title}
+            </span>
+          </div>
         </div>
       </div>
 

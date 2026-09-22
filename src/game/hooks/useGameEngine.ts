@@ -12,12 +12,18 @@ import type {
 import { ATTR_LABELS, POSITIONS, TRAP_LABELS } from "../types";
 import {
   aiPenaltyChoice,
-  aiReactTrap,
   canPlayTrap,
-  pickAttrAI,
-  pickCardAI,
   resolveDuel,
 } from "../engine";
+import {
+  loadTacticalMemory,
+  pickCardAIAdaptive,
+  pickAttrAIAdaptive,
+  aiReactTrapAdaptive,
+  getAITaunt,
+  recordTacticalStatBatch,
+} from "../aiTacticalEngine";
+import { getPlayerLevel, recordMatchResult } from "../playerLevel";
 import { buildDeck } from "../data";
 import { sound } from "../audio";
 
@@ -68,11 +74,14 @@ export type GameState = {
   trapAnnounceFor: "P" | "AI" | null;
   pendingResolve: PendingResolve;
   lastReward: Reward;
+  aiSpeech: string | null;
+  playerLevel: number;
 };
 
 type InitArgs = { difficulty: Difficulty; decks?: { P: Card[]; AI: Card[] } | null };
 
 function initState({ difficulty, decks }: InitArgs): GameState {
+  const pLevelInfo = getPlayerLevel();
   return {
     pDeck: decks?.P ?? buildDeck("P"),
     aiDeck: decks?.AI ?? buildDeck("AI"),
@@ -100,6 +109,8 @@ function initState({ difficulty, decks }: InitArgs): GameState {
     trapAnnounceFor: null,
     pendingResolve: null,
     lastReward: { p: null, ai: null },
+    aiSpeech: getAITaunt({ event: "MATCH_START", playerLevel: pLevelInfo.level }),
+    playerLevel: pLevelInfo.level,
   };
 }
 
@@ -127,7 +138,8 @@ export type Action =
   | { type: "ADVANCE_ROUND" }
   | { type: "END_POS" }
   | { type: "NEXT_POS" }
-  | { type: "TOAST"; toast: GameState["toast"] };
+  | { type: "TOAST"; toast: GameState["toast"] }
+  | { type: "SET_AI_SPEECH"; speech: string | null };
 
 function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
@@ -298,6 +310,8 @@ function gameReducer(state: GameState, action: Action): GameState {
     }
     case "TOAST":
       return { ...state, toast: action.toast };
+    case "SET_AI_SPEECH":
+      return { ...state, aiSpeech: action.speech };
     default:
       return state;
   }
@@ -368,6 +382,11 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
   const aiReactRef = useRef<string | null>(null);
   const revealComputedRef = useRef<string | null>(null);
 
+  // Carregar memória tática do Supabase no mount
+  useEffect(() => {
+    void loadTacticalMemory();
+  }, []);
+
   // Toast auto-clear
   useEffect(() => {
     if (!state.toast) return;
@@ -382,19 +401,19 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
     }
   }, [state.phase]);
 
-  // AI auto-pick attribute
+  // AI auto-pick attribute (adaptativo por nível do jogador e memória tática)
   useEffect(() => {
     if (state.phase === "PICK_ATTR" && state.chooser === "AI" && aiCard) {
       const t = setTimeout(() => {
         const remainingP = pHand.filter((c) => !state.pUsedCardIds.includes(c.id));
-        const attr = pickAttrAI(aiCard, remainingP, state.difficulty);
+        const attr = pickAttrAIAdaptive(aiCard, remainingP, pos, state.playerLevel, state.difficulty);
         dispatch({ type: "PICK_ATTR", attr });
       }, 700);
       return () => clearTimeout(t);
     }
-  }, [state.phase, state.chooser, aiCard, state.difficulty, pHand, state.pUsedCardIds]);
+  }, [state.phase, state.chooser, aiCard, state.difficulty, state.playerLevel, pos, pHand, state.pUsedCardIds]);
 
-  // AI reactive trap
+  // AI reactive trap (adaptativo por nível do jogador)
   useEffect(() => {
     if (state.phase !== "ANNOUNCE_ATTR") return;
     if (state.pTrapPlayed || state.aiTrapPlayed) return;
@@ -403,7 +422,7 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
     const key = `${state.posIdx}-${state.roundIdx}-${state.chosenAttr}`;
     if (aiReactRef.current === key) return;
     aiReactRef.current = key;
-    const decision = aiReactTrap(
+    const decision = aiReactTrapAdaptive(
       state.aiTraps,
       pos,
       state.chosenAttr,
@@ -411,6 +430,7 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
       aiCard,
       state.posScore,
       state.roundIdx,
+      state.playerLevel,
       state.difficulty,
     );
     if (decision && canPlayTrap(decision, pos)) {
@@ -418,6 +438,10 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
         dispatch({
           type: "TOAST",
           toast: { text: "IA BAIXOU UMA TRAP!", color: "blue" },
+        });
+        dispatch({
+          type: "SET_AI_SPEECH",
+          speech: getAITaunt({ event: "AI_TRAP", playerLevel: state.playerLevel }),
         });
         dispatch({ type: "PLAY_TRAP_AI", trap: decision });
       }, 500);
@@ -431,6 +455,7 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
     state.aiTraps,
     state.posScore,
     state.roundIdx,
+    state.playerLevel,
     state.difficulty,
     state.posIdx,
     pos,
@@ -503,6 +528,36 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
       winner: res.winner,
     };
     dispatch({ type: "SET_PENDING", pending: { log }, phase: "REVEAL" });
+
+    // Fala contextual da IA com o nome da carta jogada (paródia cadastrada)
+    const tauntEvent =
+      res.winner === "AI"
+        ? "AI_WON_ROUND"
+        : res.winner === "P"
+          ? "PLAYER_WON_ROUND"
+          : "ROUND_DRAW";
+    dispatch({
+      type: "SET_AI_SPEECH",
+      speech: getAITaunt({
+        event: tauntEvent,
+        cardName: pCard.name,
+        playerLevel: state.playerLevel,
+      }),
+    });
+
+    // Registra aprendizado coletivo no Supabase em segundo plano
+    if (state.chosenAttr) {
+      const statsBatch: { statKey: string; attribute: string }[] = [
+        { statKey: `pos_attr:${pos}`, attribute: state.chosenAttr },
+      ];
+      if (state.roundIdx === 0) {
+        statsBatch.push({
+          statKey: "round0_tier_choice",
+          attribute: `tier_${pCard.tier}`,
+        });
+      }
+      void recordTacticalStatBatch(statsBatch);
+    }
   }, [
     state.phase,
     state.chosenAttr,
@@ -511,6 +566,8 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
     state.chooser,
     state.posIdx,
     state.roundIdx,
+    state.playerLevel,
+    pos,
     pCard,
     aiCard,
   ]);
@@ -519,9 +576,14 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
   useEffect(() => {
     if (state.phase === "GAME_END" && !endedRef.current) {
       endedRef.current = true;
-      if (state.goals.p > state.goals.ai) {
+      const won = state.goals.p > state.goals.ai;
+      const draw = state.goals.p === state.goals.ai;
+      if (won) {
         sound.playVictory();
       }
+      // Concede XP e atualiza o nível do jogador
+      recordMatchResult(won, draw);
+
       onEnd({
         goals: state.goals,
         difficulty: state.difficulty,
@@ -536,10 +598,34 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
       if (state.phase !== "SELECT_CARD") return;
       if (state.pUsedCardIds.includes(c.id)) return;
       sound.playCardFlip();
-      const aiPick = pickCardAI(aiHand, state.aiUsedCardIds, state.difficulty);
+      const aiPick = pickCardAIAdaptive(
+        aiHand,
+        state.aiUsedCardIds,
+        state.playerLevel,
+        state.roundIdx,
+        state.posScore,
+        pHand,
+      );
       dispatch({ type: "SELECT_CARDS", pId: c.id, aiId: aiPick.id });
+      dispatch({
+        type: "SET_AI_SPEECH",
+        speech: getAITaunt({
+          event: "PLAYER_CARD",
+          cardName: c.name,
+          playerLevel: state.playerLevel,
+        }),
+      });
     },
-    [state.phase, state.pUsedCardIds, state.aiUsedCardIds, state.difficulty, aiHand],
+    [
+      state.phase,
+      state.pUsedCardIds,
+      state.aiUsedCardIds,
+      state.playerLevel,
+      state.roundIdx,
+      state.posScore,
+      aiHand,
+      pHand,
+    ],
   );
 
   const handlePenalty = useCallback(
@@ -566,6 +652,13 @@ export function useGameEngine({ difficulty, decks, onEnd }: UseGameEngineProps) 
           text: result === "GOL" ? "GOOOL!" : "DEFENDEU!",
           color: result === "GOL" ? "green" : "yellow",
         },
+      });
+      dispatch({
+        type: "SET_AI_SPEECH",
+        speech: getAITaunt({
+          event: "PENALTY_START",
+          playerLevel: state.playerLevel,
+        }),
       });
       const trapEffect = trapConcreteEffect(
         "PENALTI",

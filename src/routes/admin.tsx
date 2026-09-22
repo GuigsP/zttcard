@@ -253,6 +253,21 @@ function AdminPage() {
     }
   }
 
+  async function handleForceSyncSupabase() {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("ztt.local.cards.db");
+        localStorage.removeItem("ztt.local.packs.db");
+      }
+      await refresh();
+      setSuccessMsg("Base de cartas e pacotes atualizada diretamente do Supabase!");
+      setShowToolsMenu(false);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      setError("Erro ao sincronizar com o Supabase.");
+    }
+  }
+
   const founderPack = packs.find((p) => p.slug === FOUNDER_SLUG);
   const defaultPackIds = founderPack ? [founderPack.id] : [];
 
@@ -399,6 +414,16 @@ function AdminPage() {
                       </div>
                     </button>
                     <div className="h-px bg-slate-800 my-1" />
+                    <button
+                      onClick={handleForceSyncSupabase}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-teal-300 hover:bg-teal-950/40 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <span className="text-base">🔄</span>
+                      <div>
+                        <div className="font-medium">Atualizar do Supabase</div>
+                        <div className="text-[10px] text-teal-500/80">Limpar cache local e recarregar nuvem</div>
+                      </div>
+                    </button>
                     <button
                       onClick={handleResetDefaultRoster}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-amber-300 hover:bg-amber-950/40 rounded-lg transition-colors cursor-pointer"
@@ -625,6 +650,7 @@ function DashboardStatsBar({ cards, packs }: { cards: DBCard[]; packs: DBPack[] 
   const copa90Cards = cards.filter((c) => cardBelongsToPack(c, "copa-90", packs)).length;
   const copa94Cards = cards.filter((c) => cardBelongsToPack(c, "copa-94", packs)).length;
   const copa98Cards = cards.filter((c) => cardBelongsToPack(c, "copa-98", packs)).length;
+  const leoesCards = cards.filter((c) => cardBelongsToPack(c, "os-leoes", packs)).length;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
@@ -692,6 +718,11 @@ function DashboardStatsBar({ cards, packs }: { cards: DBCard[]; packs: DBPack[] 
           <span className="bg-rose-950 text-rose-300 border border-rose-800/60 text-[10px] font-semibold px-2 py-0.5 rounded-md">
             98: <b className="text-white">{copa98Cards}</b>
           </span>
+          {leoesCards > 0 && (
+            <span className="bg-amber-950 text-amber-300 border border-amber-800/60 text-[10px] font-semibold px-2 py-0.5 rounded-md">
+              Leões 🔒: <b className="text-white">{leoesCards}</b>
+            </span>
+          )}
         </div>
         <div className="text-[11px] text-slate-400 mt-1">
           Baralhos temáticos

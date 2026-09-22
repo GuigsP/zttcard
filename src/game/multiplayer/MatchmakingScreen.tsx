@@ -6,6 +6,14 @@ import { readIdentity, type PlayerIdentity } from "../storage";
 import { NicknameSetup } from "./NicknameSetup";
 import { avatarUrl } from "./avatars";
 import { CUP_PACKS, getPackTheme } from "../packThemes";
+import {
+  listPacks,
+  getCachedPacks,
+  canCurrentPlayerAccessPack,
+  isPackExclusive,
+  grantExclusiveCardsToOwner,
+  type DBPack,
+} from "../cardsRepo";
 
 type Props = {
   onBack: () => void;
@@ -21,6 +29,12 @@ export function MatchmakingScreen({ onBack }: Props) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => {
+    return getCachedPacks().filter(
+      (p) => p.is_active && p.slug !== "founder" && p.slug !== "fundador" && canCurrentPlayerAccessPack(p)
+    );
+  });
+
   const createFn = useServerFn(createRoom);
   const joinFn = useServerFn(joinRoom);
 
@@ -28,6 +42,15 @@ export function MatchmakingScreen({ onBack }: Props) {
     const id = readIdentity();
     if (id) setIdentity(id);
     else setShowSetup(true);
+
+    grantExclusiveCardsToOwner();
+    listPacks().then((all) => {
+      const filtered = all.filter(
+        (p) => p.is_active && p.slug !== "founder" && p.slug !== "fundador" && canCurrentPlayerAccessPack(p)
+      );
+      if (filtered.length > 0) setAvailablePacks(filtered);
+      grantExclusiveCardsToOwner();
+    });
   }, []);
 
   const onCreate = useCallback(async () => {
@@ -137,32 +160,39 @@ export function MatchmakingScreen({ onBack }: Props) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl mb-8">
-            {CUP_PACKS.map((t) => {
-              const selected = cupPack === t.slug;
+            {availablePacks.map((p) => {
+              const t = getPackTheme(p.slug);
+              const isExcl = isPackExclusive(p);
+              const selected = cupPack === p.slug;
               return (
                 <button
-                  key={t.slug}
-                  onClick={() => setCupPack(t.slug)}
+                  key={p.slug}
+                  onClick={() => setCupPack(p.slug)}
                   style={{
                     borderColor: selected ? "#ffd60a" : t.border,
                     backgroundColor: t.topBg,
                     color: t.topFg,
                   }}
-                  className={`border-4 shadow-arcade p-6 flex flex-col items-center gap-3 transition-transform ${
+                  className={`border-4 shadow-arcade p-6 flex flex-col items-center gap-3 transition-transform relative ${
                     selected ? "scale-105 ring-4 ring-arcade-yellow" : "hover:-translate-y-1"
                   }`}
                 >
+                  {isExcl && (
+                    <div className="absolute -top-3 -right-2 font-arcade text-[8px] bg-amber-500 text-arcade-dark px-2 py-0.5 border-2 border-black rounded-full font-bold shadow">
+                      ⭐ EXCLUSIVO
+                    </div>
+                  )}
                   <div
                     className="font-arcade text-4xl leading-none px-3 py-2 rounded"
                     style={{ backgroundColor: t.topFg, color: t.border }}
                   >
-                    {t.badge}
+                    {t.badge ?? "PACK"}
                   </div>
                   <div
-                    className="text-2xl leading-none tracking-wider"
+                    className="text-2xl leading-none tracking-wider text-center"
                     style={{ fontFamily: t.nameFont }}
                   >
-                    {t.label}
+                    {p.name}
                   </div>
                   {selected && (
                     <div className="font-arcade text-[10px] bg-arcade-yellow text-arcade-dark px-2 py-1 border-2 border-arcade-dark">

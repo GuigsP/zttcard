@@ -66,9 +66,10 @@ export function getCardRarity(ovr: number): CardRarity {
 
 export type CatalogCard = Card & {
   slotNumber: number;
-  collection: "fundador" | "copa-90" | "copa-94" | "copa-98";
+  collection: string;
   rarity: CardRarity;
   marketValue: number;
+  isExclusive?: boolean;
 };
 
 export type PlayerWallet = {

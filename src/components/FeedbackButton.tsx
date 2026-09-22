@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { submitFeedback } from "@/lib/feedback.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 const LS_KEY = "ztt.feedback.lastSentAt";
 const COOLDOWN_MS = 30_000;
@@ -14,7 +13,6 @@ export function FeedbackButton() {
   const [comment, setComment] = useState("");
   const [handle, setHandle] = useState("");
   const [sending, setSending] = useState(false);
-  const submit = useServerFn(submitFeedback);
 
   // Hide on admin/auth pages.
   if (pathname.startsWith("/admin") || pathname.startsWith("/auth")) return null;
@@ -41,7 +39,28 @@ export function FeedbackButton() {
     }
     setSending(true);
     try {
-      await submit({ data: { rating, comment, handle, page: pathname } });
+      // Obter usuário se logado (opcional)
+      let userId: string | null = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) userId = user.id;
+      } catch {
+        /* ignore */
+      }
+
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : "";
+
+      const { error } = await supabase.from("feedback").insert({
+        rating,
+        comment: comment.trim().slice(0, 500),
+        handle: handle.trim().slice(0, 60),
+        page: pathname.slice(0, 200),
+        user_agent: ua,
+        user_id: userId,
+      });
+
+      if (error) throw new Error(error.message);
+
       try {
         localStorage.setItem(LS_KEY, String(Date.now()));
       } catch {

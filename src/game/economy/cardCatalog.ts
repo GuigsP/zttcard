@@ -1,17 +1,37 @@
 import { buildDeck } from "../data";
-import type { Card } from "../types";
+import type { Card, AttrKey } from "../types";
 import { type CatalogCard, getCardRarity, RARITY_CONFIG } from "./economyTypes";
-
-let catalogCache: CatalogCard[] | null = null;
+import { getCachedCards, checkIsCardExclusive } from "../cardsRepo";
 
 export function getMasterCatalog(): CatalogCard[] {
-  if (catalogCache) return catalogCache;
+  const dbCards = getCachedCards();
+  if (dbCards && dbCards.length > 0) {
+    return dbCards.map((card, idx) => {
+      const rarity = getCardRarity(card.ovr);
+      const sellPrice = RARITY_CONFIG[rarity].sellPrice;
+      const cardId = card.legacy_id ?? card.id;
+      return {
+        id: cardId,
+        name: card.name,
+        position: card.position,
+        ovr: card.ovr,
+        attrs: card.attrs as Partial<Record<AttrKey, number>>,
+        quote: card.quote ?? "",
+        cardNumber: card.card_number ?? idx + 1,
+        slotNumber: card.card_number ?? idx + 1,
+        collection: card.pack_ids?.[0] ?? "fundador",
+        rarity,
+        marketValue: sellPrice,
+        isExclusive: checkIsCardExclusive(cardId),
+      };
+    });
+  }
 
   const pCards = buildDeck("P");
   const aiCards = buildDeck("AI");
   const allRawCards: Card[] = [...pCards, ...aiCards];
 
-  const catalog: CatalogCard[] = allRawCards.map((card, idx) => {
+  return allRawCards.map((card, idx) => {
     const rarity = getCardRarity(card.ovr);
     const sellPrice = RARITY_CONFIG[rarity].sellPrice;
     return {
@@ -20,11 +40,9 @@ export function getMasterCatalog(): CatalogCard[] {
       collection: "fundador",
       rarity,
       marketValue: sellPrice,
+      isExclusive: checkIsCardExclusive(card.id),
     };
   });
-
-  catalogCache = catalog;
-  return catalog;
 }
 
 export function getCardById(cardId: string): CatalogCard | null {

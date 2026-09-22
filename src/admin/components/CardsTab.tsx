@@ -121,7 +121,7 @@ export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
                     className="w-2.5 h-2.5 rounded-full border border-black/30"
                     style={{ backgroundColor: theme.border }}
                   />
-                  <span>{p.name}</span>
+                  <span>{p.name}{!p.is_active ? " 🔒(Oculto)" : ""}</span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded ${isSelected ? "bg-slate-300 text-slate-900" : "bg-slate-900 text-slate-400"}`}>
                     {count}
                   </span>

@@ -1,5 +1,9 @@
-// Web Audio API procedural retro 8-bit sound generator & BGM Radio Manager
-// Zero external files dependency, instant loading, zero latency, pure arcade nostalgia.
+interface StationTimeline {
+  currentTrack: number;
+  trackOffsetSeconds: number;
+  lastSyncTimestamp: number;
+  trackDuration: number;
+}
 
 class SoundManager {
   private ctx: AudioContext | null = null;
@@ -7,6 +11,7 @@ class SoundManager {
   private muted: boolean = false;
   private volume: number = 0.5; // 0.0 to 1.0 (default 50%)
   private playSessionId: number = 0;
+  private stationTimelines: Record<string, StationTimeline> = {};
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -19,6 +24,7 @@ class SoundManager {
           this.volume = parsed;
         }
       }
+      this.loadStationTimelines();
     }
   }
 
@@ -774,21 +780,27 @@ class SoundManager {
   }
 
   public playTapeMode(): void {
+    this.syncCurrentStationTimeline();
+    this.saveStationTimelines();
     this.playTapeInsert();
     this.isPirateMode = true;
     this.currentStationIndex = 0;
-    this.currentTrackNumber = 1;
     this.radioPlaying = true;
     this.setMuted(false);
+    this.startCurrentStation();
+    this.notifyRadioListeners();
   }
 
   public playFmRadioMode(): void {
+    this.syncCurrentStationTimeline();
+    this.saveStationTimelines();
     this.playRadioTune();
     this.isPirateMode = false;
     this.currentStationIndex = 0;
-    this.currentTrackNumber = 1;
     this.radioPlaying = true;
     this.setMuted(false);
+    this.startCurrentStation();
+    this.notifyRadioListeners();
   }
 
   public togglePirateMode(): boolean {
@@ -807,6 +819,25 @@ class SoundManager {
 
   public isRadioPlaying() {
     return this.radioPlaying;
+  }
+
+  public getCurrentTrackNumber(): number {
+    return this.currentTrackNumber;
+  }
+
+  public getCurrentPlaybackTime(): { current: number; duration: number } {
+    if (this.radioAudioElement && !isNaN(this.radioAudioElement.currentTime)) {
+      return {
+        current: Math.floor(this.radioAudioElement.currentTime),
+        duration: Math.floor(this.radioAudioElement.duration || 180),
+      };
+    }
+    const station = this.getRadioStation();
+    const timeline = this.stationTimelines[station.id];
+    return {
+      current: Math.floor(timeline?.trackOffsetSeconds ?? 0),
+      duration: Math.floor(timeline?.trackDuration ?? 180),
+    };
   }
 
   public subscribeRadio(cb: () => void) {
@@ -842,17 +873,14 @@ class SoundManager {
       ctx.resume().catch(() => {});
     }
 
-    if (this.radioAudioElement && this.radioAudioElement.paused) {
-      this.radioAudioElement.play().catch(() => {
-        this.startCurrentStation();
-      });
-    } else if (!this.radioAudioElement && !this.proceduralInterval) {
-      this.startCurrentStation();
-    }
+    // Retoma no ponto exato do relógio virtual contínuo da estação atual
+    this.startCurrentStation();
     this.notifyRadioListeners();
   }
 
   public pauseRadio() {
+    this.syncCurrentStationTimeline();
+    this.saveStationTimelines();
     this.radioPlaying = false;
     if (this.radioAudioElement) {
       try {
@@ -869,10 +897,11 @@ class SoundManager {
   }
 
   public nextRadioStation() {
+    this.syncCurrentStationTimeline();
+    this.saveStationTimelines();
     this.playRadioTune();
     const stations = this.getRadioStations();
     this.currentStationIndex = (this.currentStationIndex + 1) % stations.length;
-    this.currentTrackNumber = 1;
     if (this.radioPlaying) {
       this.startCurrentStation();
     }
@@ -880,11 +909,12 @@ class SoundManager {
   }
 
   public prevRadioStation() {
+    this.syncCurrentStationTimeline();
+    this.saveStationTimelines();
     this.playRadioTune();
     const stations = this.getRadioStations();
     this.currentStationIndex =
       (this.currentStationIndex - 1 + stations.length) % stations.length;
-    this.currentTrackNumber = 1;
     if (this.radioPlaying) {
       this.startCurrentStation();
     }
@@ -910,34 +940,145 @@ class SoundManager {
     }
   }
 
+  private loadStationTimelines(): void {
+    if (typeof window === "undefined") return;
+    const now = Date.now();
+    try {
+      const raw = localStorage.getItem("ztt.radio.timelines");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === "object" && parsed !== null) {
+          this.stationTimelines = parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const allStations = [...this.officialStations, ...this.pirateStations];
+    allStations.forEach((s, idx) => {
+      if (!this.stationTimelines[s.id]) {
+        this.stationTimelines[s.id] = {
+          currentTrack: 1,
+          trackOffsetSeconds: (idx * 43) % 120, // defasagem inicial para sensação de transmissão ao vivo
+          lastSyncTimestamp: now,
+          trackDuration: 180,
+        };
+      }
+    });
+  }
+
+  private saveStationTimelines(): void {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("ztt.radio.timelines", JSON.stringify(this.stationTimelines));
+    } catch {
+      // ignore
+    }
+  }
+
+  private getOrUpdateStationTimeline(stationId: string): StationTimeline {
+    const now = Date.now();
+    let timeline = this.stationTimelines[stationId];
+    if (!timeline) {
+      timeline = {
+        currentTrack: 1,
+        trackOffsetSeconds: 0,
+        lastSyncTimestamp: now,
+        trackDuration: 180,
+      };
+      this.stationTimelines[stationId] = timeline;
+    }
+
+    const currentStation = this.getRadioStation();
+    const isCurrentlyActive =
+      this.radioPlaying &&
+      this.radioAudioElement &&
+      !this.radioAudioElement.paused &&
+      currentStation.id === stationId;
+
+    if (!isCurrentlyActive) {
+      const elapsedSeconds = Math.max(0, (now - timeline.lastSyncTimestamp) / 1000);
+      if (elapsedSeconds > 0) {
+        let remaining = timeline.trackOffsetSeconds + elapsedSeconds;
+        let track = timeline.currentTrack;
+        const dur = Math.max(30, timeline.trackDuration || 180);
+
+        while (remaining >= dur) {
+          remaining -= dur;
+          track += 1;
+          if (track > 5) track = 1;
+        }
+
+        timeline.currentTrack = track;
+        timeline.trackOffsetSeconds = remaining;
+        timeline.lastSyncTimestamp = now;
+      }
+    }
+
+    return timeline;
+  }
+
+  private syncCurrentStationTimeline(): void {
+    const station = this.getRadioStation();
+    const timeline = this.stationTimelines[station.id];
+    if (!timeline) return;
+
+    if (this.radioAudioElement) {
+      timeline.trackOffsetSeconds = this.radioAudioElement.currentTime;
+      timeline.lastSyncTimestamp = Date.now();
+      if (this.radioAudioElement.duration && isFinite(this.radioAudioElement.duration)) {
+        timeline.trackDuration = this.radioAudioElement.duration;
+      }
+    }
+    this.saveStationTimelines();
+  }
+
   private startCurrentStation() {
     this.stopAudioAndProcedural();
     if (!this.radioPlaying) return;
 
     const station = this.getRadioStation();
+    const timeline = this.getOrUpdateStationTimeline(station.id);
+    this.currentTrackNumber = timeline.currentTrack;
 
     if (typeof window === "undefined") {
       this.startProceduralBGM(station.proceduralPattern);
       return;
     }
 
-    const folderTrackSrc = `/audio/${station.folder}/${this.currentTrackNumber}.mp3`;
-    this.tryPlayAudioFile(folderTrackSrc, station, () => {
-      if (this.currentTrackNumber === 1 && station.legacySrc) {
-        this.tryPlayAudioFile(station.legacySrc, station, () => {
+    const folderTrackSrc = `/audio/${station.folder}/${timeline.currentTrack}.mp3`;
+    this.tryPlayAudioFile(folderTrackSrc, station, timeline.trackOffsetSeconds, () => {
+      if (timeline.currentTrack !== 1) {
+        timeline.currentTrack = 1;
+        timeline.trackOffsetSeconds = 0;
+        this.currentTrackNumber = 1;
+        const resetSrc = `/audio/${station.folder}/1.mp3`;
+        this.tryPlayAudioFile(resetSrc, station, 0, () => {
+          if (station.legacySrc) {
+            this.tryPlayAudioFile(station.legacySrc, station, 0, () => {
+              this.startProceduralBGM(station.proceduralPattern);
+            });
+          } else {
+            this.startProceduralBGM(station.proceduralPattern);
+          }
+        });
+      } else if (station.legacySrc) {
+        this.tryPlayAudioFile(station.legacySrc, station, timeline.trackOffsetSeconds, () => {
           this.startProceduralBGM(station.proceduralPattern);
         });
       } else {
-        this.currentTrackNumber = 1;
-        const resetSrc = `/audio/${station.folder}/1.mp3`;
-        this.tryPlayAudioFile(resetSrc, station, () => {
-          this.startProceduralBGM(station.proceduralPattern);
-        });
+        this.startProceduralBGM(station.proceduralPattern);
       }
     });
   }
 
-  private tryPlayAudioFile(src: string, station: typeof this.officialStations[0], onFail: () => void) {
+  private tryPlayAudioFile(
+    src: string,
+    station: typeof this.officialStations[0],
+    initialOffset: number,
+    onFail: () => void
+  ) {
     const sessionId = this.playSessionId;
     if (!this.radioPlaying) {
       onFail();
@@ -949,9 +1090,46 @@ class SoundManager {
     audio.muted = this.muted;
     this.radioAudioElement = audio;
 
+    let seekApplied = false;
+    const applySeek = () => {
+      if (!seekApplied && audio.duration && isFinite(audio.duration)) {
+        seekApplied = true;
+        const timeline = this.stationTimelines[station.id];
+        if (timeline) {
+          timeline.trackDuration = audio.duration;
+          const safeOffset = initialOffset % audio.duration;
+          audio.currentTime = Math.max(0, Math.min(safeOffset, audio.duration - 0.5));
+          timeline.trackOffsetSeconds = audio.currentTime;
+          timeline.lastSyncTimestamp = Date.now();
+        }
+      }
+    };
+
+    audio.addEventListener("loadedmetadata", applySeek);
+    audio.addEventListener("canplay", applySeek, { once: true });
+
+    audio.ontimeupdate = () => {
+      if (sessionId === this.playSessionId && this.radioPlaying && !audio.paused) {
+        const timeline = this.stationTimelines[station.id];
+        if (timeline) {
+          timeline.trackOffsetSeconds = audio.currentTime;
+          timeline.lastSyncTimestamp = Date.now();
+          if (audio.duration && isFinite(audio.duration)) {
+            timeline.trackDuration = audio.duration;
+          }
+        }
+      }
+    };
+
     audio.onended = () => {
       if (sessionId === this.playSessionId && this.radioPlaying) {
-        this.currentTrackNumber += 1;
+        const timeline = this.stationTimelines[station.id];
+        if (timeline) {
+          timeline.currentTrack += 1;
+          timeline.trackOffsetSeconds = 0;
+          timeline.lastSyncTimestamp = Date.now();
+          this.currentTrackNumber = timeline.currentTrack;
+        }
         this.startCurrentStation();
       }
     };
@@ -965,6 +1143,7 @@ class SoundManager {
     audio
       .play()
       .then(() => {
+        applySeek();
         if (sessionId !== this.playSessionId || !this.radioPlaying) {
           audio.pause();
           audio.currentTime = 0;
