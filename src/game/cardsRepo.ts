@@ -48,21 +48,33 @@ export const DEFAULT_PACKS: DBPack[] = [
   { id: "copa-90", name: "Copa de 90", slug: "copa-90", description: "Pacote especial Copa de 1990", sort_order: 1, is_active: true },
   { id: "copa-94", name: "Copa de 94", slug: "copa-94", description: "Pacote especial Copa de 1994", sort_order: 2, is_active: true },
   { id: "copa-98", name: "Copa de 98", slug: "copa-98", description: "Pacote especial Copa de 1998", sort_order: 3, is_active: true },
-  { id: "corinthians-90", name: "Corinthians 90", slug: "corinthians-90", description: "Esquadrão Campeão Brasileiro de 1990", sort_order: 4, is_active: true },
+  { id: "parque-sao-jorge-90", name: "Parque São Jorge - 90", slug: "parque-sao-jorge-90", description: "Esquadrão Campeão de 1990", sort_order: 4, is_active: true },
 ];
 
 export function cardBelongsToPack(card: DBCard, packIdOrSlug: string, packs: DBPack[] = DEFAULT_PACKS): boolean {
   if (packIdOrSlug === "all" || packIdOrSlug === "ALL") return true;
   if (!card.pack_ids || card.pack_ids.length === 0) return false;
 
+  const isPsj = (val: string) =>
+    val === "parque-sao-jorge-90" ||
+    val === "corinthians-90" ||
+    val.includes("parque-sao-jorge") ||
+    val.includes("parque");
+
   const targetPack = packs.find((p) => p.id === packIdOrSlug || p.slug === packIdOrSlug);
   if (!targetPack) {
+    if (isPsj(packIdOrSlug)) {
+      return card.pack_ids.some(isPsj);
+    }
     return card.pack_ids.includes(packIdOrSlug);
   }
+
+  const targetIsPsj = isPsj(targetPack.id) || isPsj(targetPack.slug);
 
   return card.pack_ids.some((pid) => {
     if (pid === targetPack.id || pid === targetPack.slug) return true;
     if (targetPack.slug === FOUNDER_SLUG && (pid === "founder" || pid === "fundador")) return true;
+    if (targetIsPsj && isPsj(pid)) return true;
     const match = packs.find((x) => x.id === pid || x.slug === pid);
     return match ? match.slug === targetPack.slug || match.id === targetPack.id : false;
   });
@@ -78,6 +90,9 @@ export async function listAllCards(): Promise<DBCard[]> {
 
   // 1. Fetch from Supabase
   try {
+    const packsList = await listPacks();
+    const packMapByUuid = new Map(packsList.map((p) => [p.id, p.slug]));
+
     const { data, error } = await supabase
       .from("cards")
       .select(`${CARD_SELECT}, card_packs(pack_id)`)
@@ -85,6 +100,14 @@ export async function listAllCards(): Promise<DBCard[]> {
     if (!error && data && data.length > 0) {
       for (const row of data) {
         const r = row as unknown as (Omit<DBCard, "pack_ids"> & { card_packs?: { pack_id: string }[] });
+        const resolvedPacks = Array.from(
+          new Set(
+            (r.card_packs ?? []).flatMap((cp) => {
+              const slug = packMapByUuid.get(cp.pack_id);
+              return slug ? [cp.pack_id, slug] : [cp.pack_id];
+            })
+          )
+        );
         const c: DBCard = {
           id: r.id,
           legacy_id: r.legacy_id,
@@ -97,7 +120,7 @@ export async function listAllCards(): Promise<DBCard[]> {
           ovr: r.ovr,
           attrs: r.attrs,
           quote: r.quote,
-          pack_ids: (r.card_packs ?? []).map((cp) => cp.pack_id),
+          pack_ids: resolvedPacks,
         };
         cardMap.set(c.id, c);
       }
@@ -106,27 +129,16 @@ export async function listAllCards(): Promise<DBCard[]> {
     // fallback
   }
 
-  // 2. Fetch from LocalStorage
-  const localRaw = typeof window !== "undefined" ? localStorage.getItem(LOCAL_CARDS_KEY) : null;
-  const localList: DBCard[] = localRaw ? JSON.parse(localRaw) : [];
-  for (const lc of localList) {
-    if (!cardMap.has(lc.id)) {
-      const exists = Array.from(cardMap.values()).some(
-        (sc) => sc.name.toLowerCase() === lc.name.toLowerCase() && sc.side === lc.side && sc.position === lc.position
-      );
-      if (!exists) {
-        cardMap.set(lc.id, lc);
-      }
+  // 2. Offline / Local fallback: ONLY used if Supabase is unavailable or returned 0 cards!
+  if (cardMap.size === 0) {
+    const localRaw = typeof window !== "undefined" ? localStorage.getItem(LOCAL_CARDS_KEY) : null;
+    const localList: DBCard[] = localRaw ? JSON.parse(localRaw) : [];
+    for (const lc of localList) {
+      cardMap.set(lc.id, lc);
     }
-  }
 
-  // 3. Include built-in historical parodies from cards.json (Allejo, Romarinho, Neto, Ronaldo, etc.)
-  for (const hc of STATIC_CARDS) {
-    if (!cardMap.has(hc.id)) {
-      const exists = Array.from(cardMap.values()).some(
-        (sc) => sc.name.toLowerCase() === hc.name.toLowerCase() && sc.side === hc.side
-      );
-      if (!exists) {
+    for (const hc of STATIC_CARDS) {
+      if (!cardMap.has(hc.id)) {
         cardMap.set(hc.id, hc);
       }
     }
@@ -170,7 +182,15 @@ export async function listAllCards(): Promise<DBCard[]> {
     });
   }
 
-  const result = Array.from(cardMap.values());
+  const result = Array.from(cardMap.values()).map((c) => {
+    if (c.pack_ids && c.pack_ids.includes("corinthians-90")) {
+      const updatedPacks = Array.from(
+        new Set(c.pack_ids.map((p) => (p === "corinthians-90" ? "parque-sao-jorge-90" : p)))
+      );
+      return { ...c, pack_ids: updatedPacks };
+    }
+    return c;
+  });
   if (typeof window !== "undefined") {
     localStorage.setItem(LOCAL_CARDS_KEY, JSON.stringify(result));
   }
@@ -202,8 +222,7 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
     ? (input.tier ?? 0)
     : (typeof input.tier === "number" ? input.tier : Math.floor(Math.random() * 3));
 
-  const payload = {
-    legacy_id: input.legacy_id ?? null,
+  const payload: Record<string, any> = {
     side: input.side,
     position: input.position,
     tier,
@@ -213,46 +232,81 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
     attrs: input.attrs,
     quote: input.quote,
   };
+  if (input.legacy_id) {
+    payload.legacy_id = input.legacy_id;
+  }
 
   try {
     let cardId = input.id;
-    if (cardId && !cardId.startsWith("local-") && !cardId.startsWith("sccp-") && !cardId.startsWith("legend-")) {
-      await supabase.from("cards").update(payload).eq("id", cardId);
+    let existingCardId: string | null = null;
+
+    // Check if card exists in Supabase by UUID, legacy_id or input.id
+    const isUuid = typeof cardId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardId);
+    if (isUuid) {
+      const { data } = await supabase.from("cards").select("id").eq("id", cardId).maybeSingle();
+      if (data) existingCardId = data.id;
+    }
+    if (!existingCardId && input.legacy_id) {
+      const { data } = await supabase.from("cards").select("id").eq("legacy_id", input.legacy_id).maybeSingle();
+      if (data) existingCardId = data.id;
+    }
+    if (!existingCardId && cardId && !cardId.startsWith("card-") && !cardId.startsWith("local-")) {
+      const { data } = await supabase.from("cards").select("id").eq("legacy_id", cardId).maybeSingle();
+      if (data) existingCardId = data.id;
+    }
+
+    if (existingCardId) {
+      await supabase.from("cards").update(payload).eq("id", existingCardId);
+      cardId = existingCardId;
     } else {
-      const { data } = await supabase.from("cards").insert(payload).select("id").single();
-      if (data) cardId = data.id as string;
+      const { data: maxRow } = await supabase.from("cards").select("card_number").order("card_number", { ascending: false }).limit(1).maybeSingle();
+      payload.card_number = (maxRow?.card_number ?? 100) + 1;
+      const { data, error } = await supabase.from("cards").insert(payload).select("id").single();
+      if (!error && data) cardId = data.id as string;
     }
 
     if (cardId) {
+      const allPacks = await listPacks();
+      const packUuids: string[] = [];
+      for (const pid of input.pack_ids) {
+        const found = allPacks.find((p) => p.id === pid || p.slug === pid);
+        const candidateId = found?.id ?? pid;
+        const candidateIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidateId);
+        if (candidateIsUuid && !packUuids.includes(candidateId)) {
+          packUuids.push(candidateId);
+        }
+      }
+
       await supabase.from("card_packs").delete().eq("card_id", cardId);
-      if (input.pack_ids.length > 0) {
-        const rows = input.pack_ids.map((pack_id) => ({ card_id: cardId!, pack_id }));
+      if (packUuids.length > 0) {
+        const rows = packUuids.map((pack_id) => ({ card_id: cardId!, pack_id }));
         await supabase.from("card_packs").insert(rows);
       }
     }
-  } catch {
-    // Supabase optional in local
+  } catch (err) {
+    console.warn("Supabase upsertCard error:", err);
   }
 
   // Always update local storage
   if (typeof window !== "undefined") {
     const list = await listAllCards();
+    const existing = list.find((c) => c.id === input.id || (input.legacy_id && c.legacy_id === input.legacy_id));
     const newCard: DBCard = {
-      id: input.id || `card-${Date.now()}`,
-      legacy_id: input.legacy_id || null,
+      id: existing?.id || input.id || `card-${Date.now()}`,
+      legacy_id: input.legacy_id || existing?.legacy_id || null,
       side: input.side,
       position: input.position,
       tier,
       name: input.name,
       real_name: input.real_name || null,
-      card_number: input.id ? list.find((c) => c.id === input.id)?.card_number ?? 1 : list.length + 1,
+      card_number: existing?.card_number ?? list.length + 1,
       ovr,
       attrs: input.attrs,
       quote: input.quote,
       pack_ids: input.pack_ids,
     };
-    const updated = input.id
-      ? list.map((c) => (c.id === input.id ? newCard : c))
+    const updated = existing
+      ? list.map((c) => (c.id === existing.id ? newCard : c))
       : [newCard, ...list];
     localStorage.setItem(LOCAL_CARDS_KEY, JSON.stringify(updated));
   }
@@ -260,13 +314,18 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
 
 export async function deleteCard(id: string): Promise<void> {
   try {
-    await supabase.from("cards").delete().eq("id", id);
-  } catch {
-    // ignore
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid) {
+      await supabase.from("cards").delete().eq("id", id);
+    } else {
+      await supabase.from("cards").delete().eq("legacy_id", id);
+    }
+  } catch (err) {
+    console.warn("Supabase deleteCard error:", err);
   }
   if (typeof window !== "undefined") {
     const list = await listAllCards();
-    const updated = list.filter((c) => c.id !== id);
+    const updated = list.filter((c) => c.id !== id && c.legacy_id !== id);
     localStorage.setItem(LOCAL_CARDS_KEY, JSON.stringify(updated));
   }
 }
@@ -334,6 +393,58 @@ export async function listPacks(): Promise<DBPack[]> {
     try {
       const list = JSON.parse(localPacksRaw) as DBPack[];
       list.forEach((p) => packMap.set(p.slug, p));
+    } catch {
+      // ignore
+    }
+  }
+
+  // Deduplicação e migração automática:
+  // Se existir qualquer referência a "corinthians", removemos para garantir que
+  // apenas "Parque São Jorge - 90" apareça no painel admin!
+  for (const [key, pack] of Array.from(packMap.entries())) {
+    const isCorinthians =
+      key.includes("corinthians") ||
+      (pack.slug && pack.slug.includes("corinthians")) ||
+      (pack.id && pack.id.includes("corinthians")) ||
+      (pack.name && pack.name.toLowerCase().includes("corinthians"));
+
+    if (isCorinthians) {
+      packMap.delete(key);
+    }
+  }
+
+  // Garante que o pacote oficial Parque São Jorge - 90 está presente
+  const psjPack = Array.from(packMap.values()).find(
+    (p) => p.slug === "parque-sao-jorge-90" || p.name.toLowerCase().includes("parque s")
+  );
+  if (!psjPack) {
+    packMap.set("parque-sao-jorge-90", {
+      id: "parque-sao-jorge-90",
+      name: "Parque São Jorge - 90",
+      slug: "parque-sao-jorge-90",
+      description: "Esquadrão Campeão de 1990",
+      sort_order: 4,
+      is_active: true,
+    });
+  } else if (psjPack.name !== "Parque São Jorge - 90") {
+    // Padroniza o nome
+    psjPack.name = "Parque São Jorge - 90";
+    packMap.set(psjPack.slug, psjPack);
+  }
+
+  // Limpa o localStorage local para não reviver o pack "corinthians"
+  if (typeof window !== "undefined" && localPacksRaw) {
+    try {
+      const list = JSON.parse(localPacksRaw) as DBPack[];
+      const cleaned = list.filter(
+        (p) =>
+          !p.slug.includes("corinthians") &&
+          !p.id.includes("corinthians") &&
+          !p.name.toLowerCase().includes("corinthians")
+      );
+      if (cleaned.length !== list.length) {
+        localStorage.setItem(LOCAL_PACKS_KEY, JSON.stringify(cleaned));
+      }
     } catch {
       // ignore
     }

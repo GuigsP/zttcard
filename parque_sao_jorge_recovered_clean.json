@@ -1,0 +1,568 @@
+[
+  {
+    "id": "sccp-90-gol",
+    "legacy_id": "SCCP-90-GOL",
+    "side": "P",
+    "position": "GOL",
+    "tier": 0,
+    "name": "Ranoldo",
+    "real_name": "Ronaldo Giovanelli",
+    "card_number": 101,
+    "ovr": 83,
+    "attrs": {
+      "defesa": 93,
+      "passe": 88,
+      "fisico": 68
+    },
+    "quote": "Fiel debaixo das traves: jogou todas, defendeu até vento e ainda saiu sem tomar cartão.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-neto",
+    "legacy_id": "SCCP-90-M10",
+    "side": "P",
+    "position": "M10",
+    "tier": 0,
+    "name": "tone",
+    "real_name": "Neto",
+    "card_number": 102,
+    "ovr": 73,
+    "attrs": {
+      "criacao": 96,
+      "passe": 82,
+      "defesa": 40
+    },
+    "quote": "Falta na entrada da área é meio gol pro xodó da Fiel!",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-ld",
+    "legacy_id": "SCCP-90-LD",
+    "side": "P",
+    "position": "LE",
+    "tier": 0,
+    "name": "Ja ceni",
+    "real_name": "Jacenir",
+    "card_number": 103,
+    "ovr": 80,
+    "attrs": {
+      "defesa": 90,
+      "passe": 82,
+      "fisico": 69
+    },
+    "quote": "O terror dos pontas rivais",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-ronaldo",
+    "legacy_id": "SCCP-90-GOL",
+    "side": "P",
+    "position": "GOL",
+    "tier": 0,
+    "name": "RONALDO MURALHA",
+    "real_name": "Ronaldo Giovanelli",
+    "card_number": 104,
+    "ovr": 88,
+    "attrs": {
+      "defesa": 92,
+      "fisico": 88,
+      "passe": 78
+    },
+    "quote": "Fechou o gol no Morumbi e garantiu o primeiro título brasileiro.",
+    "pack_ids": [
+      "parque-sao-jorge-90",
+      "founder"
+    ]
+  },
+  {
+    "id": "sccp-90-dagoberto",
+    "legacy_id": "SCCP-90-GOL-RES",
+    "side": "P",
+    "position": "GOL",
+    "tier": 1,
+    "name": "Deroberto",
+    "real_name": "Dagoberto",
+    "card_number": 105,
+    "ovr": 70,
+    "attrs": {
+      "defesa": 79,
+      "passe": 74,
+      "fisico": 58
+    },
+    "quote": "O terror dos roupeiros, devolvia uniforme cheirando a amaciante.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-zad",
+    "legacy_id": "SCCP-90-ZAD",
+    "side": "P",
+    "position": "ZAD",
+    "tier": 0,
+    "name": "barcelos",
+    "real_name": "Marcelo Djian",
+    "card_number": 106,
+    "ovr": 81,
+    "attrs": {
+      "defesa": 91,
+      "passe": 77,
+      "fisico": 75
+    },
+    "quote": "Zagueiro clássico, desarme limpo e liderança nata.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-giba",
+    "legacy_id": "SCCP-90-LD",
+    "side": "P",
+    "position": "LD",
+    "tier": 0,
+    "name": "Gibi",
+    "real_name": "Giba",
+    "card_number": 107,
+    "ovr": 80,
+    "attrs": {
+      "defesa": 89,
+      "passe": 82,
+      "fisico": 69
+    },
+    "quote": "Apoio fulminante e cruzamento certo na área.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-zae",
+    "legacy_id": "SCCP-90-ZAE",
+    "side": "P",
+    "position": "LE",
+    "tier": 0,
+    "name": "Maritaca",
+    "real_name": "Pardal",
+    "card_number": 108,
+    "ovr": 58,
+    "attrs": {
+      "defesa": 62,
+      "passe": 55,
+      "fisico": 58
+    },
+    "quote": "Firme no combate aéreo e na sobra da grande área.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-marcelo",
+    "legacy_id": "SCCP-90-ZAD",
+    "side": "P",
+    "position": "LE",
+    "tier": 0,
+    "name": "Filho do Ger",
+    "real_name": "Gérson",
+    "card_number": 109,
+    "ovr": 62,
+    "attrs": {
+      "defesa": 72,
+      "passe": 64,
+      "fisico": 50
+    },
+    "quote": "Zagueiro de classe e tempo de bola impecável.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-le",
+    "legacy_id": "SCCP-90-LE",
+    "side": "P",
+    "position": "ZAE",
+    "tier": 0,
+    "name": "JACENIR CANHOTA",
+    "real_name": "Guinei",
+    "card_number": 110,
+    "ovr": 88,
+    "attrs": {
+      "defesa": 91,
+      "passe": 84,
+      "fisico": 88
+    },
+    "quote": "Marcação implacável e raça pura na lateral esquerda.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-vol",
+    "legacy_id": "SCCP-90-VOL",
+    "side": "P",
+    "position": "ZAD",
+    "tier": 0,
+    "name": "cavalheiro",
+    "real_name": "Dama",
+    "card_number": 111,
+    "ovr": 73,
+    "attrs": {
+      "defesa": 80,
+      "passe": 70,
+      "fisico": 68
+    },
+    "quote": "O motor da marcação alvinegra na campanha histórica de 1990.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-guinei",
+    "legacy_id": "SCCP-90-ZAE",
+    "side": "P",
+    "position": "ZAE",
+    "tier": 0,
+    "name": "quinei",
+    "real_name": "Guinei",
+    "card_number": 112,
+    "ovr": 78,
+    "attrs": {
+      "defesa": 80,
+      "passe": 73,
+      "fisico": 81
+    },
+    "quote": "Raça pura na contenção dos atacantes.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-m8",
+    "legacy_id": "SCCP-90-M8",
+    "side": "P",
+    "position": "ZAD",
+    "tier": 0,
+    "name": "mobileti",
+    "real_name": "Moretti",
+    "card_number": 113,
+    "ovr": 51,
+    "attrs": {
+      "defesa": 60,
+      "passe": 42,
+      "fisico": 50
+    },
+    "quote": "Gol heróico na primeira final e entrega total em campo.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-marcio",
+    "legacy_id": "SCCP-90-VOL",
+    "side": "P",
+    "position": "ZAE",
+    "tier": 0,
+    "name": "Ali fogão",
+    "real_name": "Ari Bazão",
+    "card_number": 114,
+    "ovr": 62,
+    "attrs": {
+      "defesa": 70,
+      "passe": 68,
+      "fisico": 47
+    },
+    "quote": "O coração da marcação alvinegra na grande decisão.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-m10",
+    "legacy_id": "SCCP-90-M10",
+    "side": "P",
+    "position": "M10",
+    "tier": 0,
+    "name": "veto",
+    "real_name": "Neto",
+    "card_number": 115,
+    "ovr": 88,
+    "attrs": {
+      "criacao": 95,
+      "passe": 93,
+      "defesa": 75
+    },
+    "quote": "Cobranças de falta mortais e o maestro do primeiro título nacional.",
+    "pack_ids": [
+      "founder",
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "card-1789311851263",
+    "legacy_id": null,
+    "side": "P",
+    "position": "GOL",
+    "tier": 2,
+    "name": "filho do uil",
+    "real_name": "Wílson Ricardo",
+    "card_number": 116,
+    "ovr": 54,
+    "attrs": {
+      "defesa": 63,
+      "passe": 56,
+      "fisico": 44
+    },
+    "quote": "Quando precisar estarei aqui",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-pd",
+    "legacy_id": "SCCP-90-PD",
+    "side": "P",
+    "position": "VOL",
+    "tier": 0,
+    "name": "irmão do wil",
+    "real_name": "Wilson Mano",
+    "card_number": 117,
+    "ovr": 80,
+    "attrs": {
+      "criacao": 80,
+      "passe": 78,
+      "defesa": 82
+    },
+    "quote": "Ponta incisivo que infernizou as defesas adversárias.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-wilson",
+    "legacy_id": "SCCP-90-M8",
+    "side": "P",
+    "position": "VOL",
+    "tier": 0,
+    "name": "narlio",
+    "real_name": "Márcio",
+    "card_number": 118,
+    "ovr": 82,
+    "attrs": {
+      "criacao": 81,
+      "passe": 86,
+      "defesa": 79
+    },
+    "quote": "Gol histórico na primeira final contra o rival.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-fabinho",
+    "legacy_id": "SCCP-90-PD",
+    "side": "P",
+    "position": "VOL",
+    "tier": 0,
+    "name": "Agrario",
+    "real_name": "Jairo",
+    "card_number": 119,
+    "ovr": 70,
+    "attrs": {
+      "criacao": 54,
+      "passe": 73,
+      "defesa": 82
+    },
+    "quote": "Fuga rápida pela ponta direita e correria.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-pe",
+    "legacy_id": "SCCP-90-PE",
+    "side": "P",
+    "position": "VOL",
+    "tier": 0,
+    "name": "Kiel",
+    "real_name": "Ezequiel",
+    "card_number": 120,
+    "ovr": 66,
+    "attrs": {
+      "criacao": 51,
+      "passe": 69,
+      "defesa": 79
+    },
+    "quote": "Velocidade pelas pontas e cruzamentos milimétricos.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-mauro",
+    "legacy_id": "SCCP-90-PE",
+    "side": "P",
+    "position": "M10",
+    "tier": 0,
+    "name": "Patuzinho",
+    "real_name": "Tupazinho",
+    "card_number": 121,
+    "ovr": 77,
+    "attrs": {
+      "criacao": 89,
+      "passe": 85,
+      "defesa": 58
+    },
+    "quote": "Drible curto e chegada rápida na linha de fundo.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-ata",
+    "legacy_id": "SCCP-90-ATA",
+    "side": "P",
+    "position": "M10",
+    "tier": 0,
+    "name": "talismã",
+    "real_name": "Tupãzinho",
+    "card_number": 122,
+    "ovr": 87,
+    "attrs": {
+      "criacao": 90,
+      "passe": 90,
+      "defesa": 81
+    },
+    "quote": "O gol do título de carrinho que eternizou o Talismã da Fiel.",
+    "pack_ids": [
+      "founder",
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "sccp-90-tupazinho",
+    "legacy_id": "SCCP-90-ATA",
+    "side": "P",
+    "position": "ATA",
+    "tier": 0,
+    "name": "TUPÃZINHO TALISMÃ",
+    "real_name": "Tupãzinho",
+    "card_number": 123,
+    "ovr": 85,
+    "attrs": {
+      "finalizacao": 89,
+      "drible": 83,
+      "velocidade": 82,
+      "fisico": 81
+    },
+    "quote": "O carrinho histórico que fez o Morumbi explodir em 1990.",
+    "pack_ids": [
+      "parque-sao-jorge-90",
+      "founder"
+    ]
+  },
+  {
+    "id": "sccp-90-viola",
+    "legacy_id": "SCCP-90-VIOLA",
+    "side": "P",
+    "position": "ATA",
+    "tier": 1,
+    "name": "VIOLA MATADOR",
+    "real_name": "Viola",
+    "card_number": 124,
+    "ovr": 88,
+    "attrs": {
+      "finalizacao": 90,
+      "fisico": 89,
+      "velocidade": 85,
+      "drible": 83
+    },
+    "quote": "Raça corinthiana, irreverência e faro de gol nato.",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "card-1789598419281",
+    "legacy_id": null,
+    "side": "P",
+    "position": "M8",
+    "tier": 2,
+    "name": "ardo",
+    "real_name": "Eduardo",
+    "card_number": 125,
+    "ovr": 70,
+    "attrs": {
+      "criacao": 85,
+      "passe": 76,
+      "defesa": 50
+    },
+    "quote": "",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "card-1789598490283",
+    "legacy_id": null,
+    "side": "P",
+    "position": "M8",
+    "tier": 1,
+    "name": "sergipe",
+    "real_name": "Paulo Sergio",
+    "card_number": 126,
+    "ovr": 66,
+    "attrs": {
+      "criacao": 86,
+      "passe": 70,
+      "defesa": 42
+    },
+    "quote": "",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "card-1789598622318",
+    "legacy_id": null,
+    "side": "P",
+    "position": "M10",
+    "tier": 1,
+    "name": "Abner",
+    "real_name": "Vágner",
+    "card_number": 127,
+    "ovr": 51,
+    "attrs": {
+      "criacao": 60,
+      "passe": 53,
+      "defesa": 41
+    },
+    "quote": "",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  },
+  {
+    "id": "card-1789598677315",
+    "legacy_id": null,
+    "side": "P",
+    "position": "M8",
+    "tier": 1,
+    "name": "Lelê",
+    "real_name": "Alê",
+    "card_number": 128,
+    "ovr": 50,
+    "attrs": {
+      "criacao": 59,
+      "passe": 51,
+      "defesa": 40
+    },
+    "quote": "",
+    "pack_ids": [
+      "parque-sao-jorge-90"
+    ]
+  }
+]

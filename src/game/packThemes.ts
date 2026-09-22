@@ -20,9 +20,19 @@ const THEMES: Record<string, PackTheme> = {
     badge: null,
     accent: "#ffd60a",
   },
+  "parque-sao-jorge-90": {
+    slug: "parque-sao-jorge-90",
+    label: "PARQUE SÃO JORGE 90",
+    border: "#111111",
+    topBg: "#151515",
+    topFg: "#f6f2e7",
+    nameFont: '"Bebas Neue", "Arial Narrow", sans-serif',
+    badge: "90",
+    accent: "#ffffff",
+  },
   "corinthians-90": {
     slug: "corinthians-90",
-    label: "CORINTHIANS 90",
+    label: "PARQUE SÃO JORGE 90",
     border: "#111111",
     topBg: "#151515",
     topFg: "#f6f2e7",
@@ -159,14 +169,14 @@ export function getPackTheme(slug?: string | null): PackTheme {
   if (THEMES[clean]) return THEMES[clean];
 
   // Dynamic heuristic matching for custom slugs
-  if (clean.includes("corinthians") || clean.includes("timao")) return {
+  if (clean.includes("parque") || clean.includes("sao-jorge") || clean.includes("corinthians") || clean.includes("timao")) return {
     slug: clean,
-    label: clean.toUpperCase(),
+    label: "PARQUE SÃO JORGE 90",
     border: "#111111",
     topBg: "#151515",
     topFg: "#f6f2e7",
     nameFont: '"Bebas Neue", "Arial Narrow", sans-serif',
-    badge: clean.match(/\d{2,4}/)?.[0] ?? "SCCP",
+    badge: clean.match(/\d{2,4}/)?.[0] ?? "90",
     accent: "#ffffff",
   };
 

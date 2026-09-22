@@ -1,20 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import type { DBCard, DBPack, UpsertCardInput } from "@/game/cardsRepo";
 import { FOUNDER_SLUG } from "@/game/cardsRepo";
-import { POSITIONS, POSITION_LABELS, attrsForPosition, ATTR_LABELS, type Position } from "@/game/types";
+import { POSITIONS, POSITION_LABELS, POSITION_SHORT, attrsForPosition, ATTR_LABELS, type Position } from "@/game/types";
 import { CardView } from "@/game/components/CardView";
 import { getPackTheme } from "@/game/packThemes";
-import { scoutCardFn } from "@/lib/scoutCard.functions";
-import {
-  calculateCardOverall,
-  distributeAttributesForOverall,
-  getRarityFromOverall,
-  COMPETITION_LABELS,
-  ROLE_LABELS,
-  type CompetitionTier,
-  type SquadRole,
-} from "@/types/cardScale";
+import { getRarityFromOverall } from "@/types/cardScale";
+import { getRetroNameSuggestions } from "@/game/retroNameSuggester";
 
 type Props = {
   initial: Partial<DBCard>;
@@ -33,45 +24,85 @@ export function CardEditorModal({
   onSave,
   onSaveAndNew,
 }: Props) {
-  const [side, setSide] = useState<"P" | "AI">(initial.side ?? "P");
+  // 1. Posição
   const [position, setPosition] = useState<Position>((initial.position as Position) ?? "GOL");
-  const [name, setName] = useState(initial.name ?? "");
-  const [realName, setRealName] = useState(initial.real_name ?? "");
-  const [teamOrSelection, setTeamOrSelection] = useState("");
-  const [year, setYear] = useState("");
-  const [championship, setChampionship] = useState("");
-  const [competitionTier, setCompetitionTier] = useState<CompetitionTier>("LIGA_NACIONAL");
-  const [squadRole, setSquadRole] = useState<SquadRole>("TITULAR");
-  const [baseScore, setBaseScore] = useState<number>(78);
-  const [visualPrompt, setVisualPrompt] = useState("");
-  const [quote, setQuote] = useState(initial.quote ?? "");
-  const [legacyId, setLegacyId] = useState(initial.legacy_id ?? "");
-  const [packIds, setPackIds] = useState<string[]>(initial.pack_ids ?? []);
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiSuccess, setAiSuccess] = useState<string | null>(null);
+  const [side, setSide] = useState<"P" | "AI">(initial.side ?? "P");
 
-  const attrKeys = attrsForPosition(position);
+  // 2. Deck (Coleção / Moldura)
+  const [packIds, setPackIds] = useState<string[]>(() => {
+    if (initial.pack_ids && initial.pack_ids.length > 0) return initial.pack_ids;
+    // Default to first active pack or parque-sao-jorge-90
+    const psj = packs.find((p) => p.slug === "parque-sao-jorge-90");
+    return psj ? [psj.id, psj.slug] : packs[0] ? [packs[0].id, packs[0].slug] : ["parque-sao-jorge-90"];
+  });
+
+  // 3. Nome Real & 4. Nome Carta (Paródia)
+  const [realName, setRealName] = useState(initial.real_name ?? "");
+  const [name, setName] = useState(initial.name ?? "");
+  const [lastAutoName, setLastAutoName] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  // 5. Frase de Efeito
+  const [quote, setQuote] = useState(initial.quote ?? "");
+
+  // Legacy ID (internal)
+  const [legacyId] = useState(initial.legacy_id ?? "");
+
+  // 6. Atributos (por posição)
+  const attrKeys = useMemo(() => attrsForPosition(position), [position]);
   const [attrs, setAttrs] = useState<Record<string, number>>(() => {
     const base = { ...(initial.attrs ?? {}) } as Record<string, number>;
-    for (const k of attrKeys) if (base[k] == null) base[k] = 75;
+    for (const k of attrsForPosition((initial.position as Position) ?? "GOL")) {
+      if (base[k] == null) base[k] = 80;
+    }
     return base;
   });
 
+  // Sincroniza atributos quando a posição muda
+  useEffect(() => {
+    setAttrs((prev) => {
+      const updated: Record<string, number> = {};
+      for (const k of attrKeys) {
+        updated[k] = prev[k] ?? 80;
+      }
+      return updated;
+    });
+  }, [attrKeys]);
+
+  // Overall (OVR) ponderado
   const ovr = useMemo(() => {
     const vals = attrKeys.map((k) => attrs[k] ?? 0);
-    if (vals.length === 0) return 0;
+    if (vals.length === 0) return 75;
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
   }, [attrs, attrKeys]);
 
   const rarity = getRarityFromOverall(ovr);
 
-  useEffect(() => {
-    const filtered: Record<string, number> = {};
-    for (const k of attrKeys) filtered[k] = attrs[k] ?? 75;
-    setAttrs(filtered);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [position]);
+  // Auto-complete inteligente: ao digitar o Nome Real, preenche automaticamente o Nome Carta
+  function handleRealNameChange(val: string) {
+    setRealName(val);
+    const { primary, suggestions: suggs } = getRetroNameSuggestions(val);
+    setSuggestions(suggs);
+
+    // Se o nome da carta está vazio ou se o usuário ainda não personalizou manualmente
+    if (primary && (!name || name === lastAutoName)) {
+      setName(primary);
+      setLastAutoName(primary);
+    }
+  }
+
+  function handlePickSuggestion(sugg: string) {
+    setName(sugg);
+    setLastAutoName(sugg);
+  }
+
+  function updateAttr(key: string, deltaOrVal: number, isDelta = false) {
+    setAttrs((prev) => {
+      const current = prev[key] ?? 75;
+      const nextVal = isDelta ? Math.min(99, Math.max(1, current + deltaOrVal)) : Math.min(99, Math.max(1, deltaOrVal));
+      return { ...prev, [key]: nextVal };
+    });
+  }
 
   function togglePack(p: DBPack) {
     setPackIds((cur) => {
@@ -83,66 +114,14 @@ export function CardEditorModal({
     });
   }
 
-  function applyCalculatedOverall(base: number, comp: CompetitionTier, role: SquadRole) {
-    const calculatedOvr = calculateCardOverall(base, comp, role);
-    const distributed = distributeAttributesForOverall(position, calculatedOvr);
-    setAttrs(distributed);
-  }
-
-  const scoutFn = useServerFn(scoutCardFn);
-
-  async function handleScoutAthlete() {
-    if (!realName.trim()) {
-      setAiError("Digite o Nome do Atleta real primeiro (Ex: Ronaldinho, Dagoberto, Romário, Dida).");
-      return;
-    }
-    setAiBusy(true);
-    setAiError(null);
-    setAiSuccess(null);
-    try {
-      const existing = allCards
-        .filter((c) => c.id !== initial.id)
-        .map((c) => c.name);
-      
-      const res = await scoutFn({
-        data: {
-          realName: realName.trim(),
-          position,
-          teamOrSelection: teamOrSelection.trim(),
-          year: year.trim(),
-          championship: championship.trim(),
-          competitionTier,
-          squadRole,
-          existingNames: existing,
-        },
-      });
-
-      if (res.suggestedPosition && res.suggestedPosition !== position) {
-        setPosition(res.suggestedPosition);
-      }
-      if (res.suggestedName) setName(res.suggestedName);
-      if (res.quote) setQuote(res.quote);
-      if (res.visualPrompt) setVisualPrompt(res.visualPrompt);
-      if (res.baseScore) setBaseScore(res.baseScore);
-      if (res.attrs) {
-        setAttrs((prev) => ({ ...prev, ...res.attrs }));
-      }
-      setAiSuccess(`Overall ponderado (${res.ovr} · ${res.rarity.toUpperCase()}) calculado com sucesso!`);
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : "Falha ao analisar atleta com IA.");
-    } finally {
-      setAiBusy(false);
-    }
-  }
-
   function buildInput(): UpsertCardInput {
     return {
       id: initial.id,
       legacy_id: legacyId || null,
       side,
       position,
-      tier: initial.id ? initial.tier : undefined,
-      name: name.trim(),
+      tier: initial.id ? initial.tier : (ovr >= 85 ? 0 : ovr >= 75 ? 1 : 2),
+      name: name.trim() || (realName.trim() ? realName.trim().toUpperCase() : "CARTA"),
       real_name: realName.trim() || null,
       attrs,
       quote: quote.trim(),
@@ -150,19 +129,20 @@ export function CardEditorModal({
     };
   }
 
-  function submit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSave(buildInput());
   }
 
-  function handleSaveAndNew() {
+  function handleSaveNext() {
     if (!onSaveAndNew) return;
     onSaveAndNew(buildInput());
   }
 
-  // Active theme resolution
-  const activePack = packs.find((p) => (packIds.includes(p.id) || packIds.includes(p.slug)) && p.slug !== FOUNDER_SLUG) 
-    ?? packs.find((p) => packIds.includes(p.id) || packIds.includes(p.slug));
+  // Resolução do tema ativo da moldura
+  const activePack =
+    packs.find((p) => (packIds.includes(p.id) || packIds.includes(p.slug)) && p.slug !== FOUNDER_SLUG) ??
+    packs.find((p) => packIds.includes(p.id) || packIds.includes(p.slug));
   const previewPackSlug = activePack?.slug;
   const activeTheme = getPackTheme(previewPackSlug);
 
@@ -172,298 +152,107 @@ export function CardEditorModal({
     position,
     ovr,
     attrs: attrs as Partial<Record<import("@/game/types").AttrKey, number>>,
-    quote: quote.trim() || "Frase lendária do jogador dos anos 90.",
+    quote: quote.trim() || "Frase lendária do craque dos anos 90.",
     cardNumber: initial.card_number,
     packSlug: previewPackSlug,
   };
 
+  function getPositionBadgeColor(p: Position) {
+    if (p === "GOL") return "border-emerald-600/80 bg-emerald-950/90 text-emerald-300";
+    if (["LD", "ZAD", "ZAE", "LE"].includes(p)) return "border-blue-600/80 bg-blue-950/90 text-blue-300";
+    if (["VOL", "M8", "M10"].includes(p)) return "border-amber-600/80 bg-amber-950/90 text-amber-300";
+    return "border-rose-600/80 bg-rose-950/90 text-rose-300";
+  }
+
   return (
-    <form onSubmit={submit} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-7 space-y-6 shadow-2xl text-slate-100">
+    <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-7 shadow-2xl text-slate-100 mb-8">
       
-      {/* Header bar */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-sm">
-            {initial.id ? "✏️" : "🎨"}
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-800/90 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-lg">
+            {initial.id ? "✏️" : "⚡"}
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">
-              {initial.id ? "Editar Carta" : "Estúdio de Criação de Carta"}
-            </h3>
+            <h2 className="text-lg font-bold text-white tracking-wide">
+              {initial.id ? `Editar Carta #${initial.card_number ?? ""}` : "Criar Nova Carta"}
+            </h2>
             <p className="text-xs text-slate-400">
-              Configure identidade, atributos ponderados e moldura temática.
+              Fluxo rápido e direto: selecione a posição, digite o jogador e salve.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {typeof initial.card_number === "number" && (
-            <div className="text-xs font-mono bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">
-              Nº {String(initial.card_number).padStart(3, "0")}
-            </div>
-          )}
-          <div className={`text-xs font-bold px-3 py-1 rounded-lg border ${
-            ovr >= 90 ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : ovr >= 80 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : ovr >= 63 ? "bg-blue-500/20 text-blue-300 border-blue-500/40" : "bg-slate-800 text-slate-300 border-slate-700"
-          }`}>
-            OVR {ovr} · {rarity === "lendaria" ? "🌟 LENDÁRIA (GOAT)" : rarity === "epica" ? "🛡️ ÉPICA (CRAQUE)" : rarity === "rara" ? "⚡ RARA (SÉRIE A)" : "⚽ COMUM (VÁRZEA)"}
-          </div>
-          {initial.id && typeof initial.tier === "number" && (
-            <div className="text-xs font-mono bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">
-              Tier {initial.tier}
-            </div>
-          )}
+        {/* Lado (P / IA) selector */}
+        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          <span className="text-[11px] font-semibold text-slate-400 px-2">Lado:</span>
+          <button
+            type="button"
+            onClick={() => setSide("P")}
+            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              side === "P" ? "bg-emerald-600 text-white shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Jogador (P)
+          </button>
+          <button
+            type="button"
+            onClick={() => setSide("AI")}
+            className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              side === "AI" ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            IA (AI)
+          </button>
         </div>
       </div>
 
-      {/* Main Studio Grid: Left = Form + AI Scout, Right = Live Moldura & Card */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_320px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* LEFT COLUMN: Controls & AI Scout */}
-        <div className="space-y-5">
+        {/* LEFT COLUMN: FORM FIELDS IN EXACT REQUESTED ORDER */}
+        <div className="lg:col-span-8 space-y-6">
           
-          {/* AI SCOUT ASSISTANT (4 HISTORICAL KEYS + MATHEMATICAL SCALE) */}
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4 shadow-inner">
-            <div className="flex items-center justify-between flex-wrap gap-1">
-              <div className="text-xs font-bold text-emerald-400 flex items-center gap-2">
-                <span>🧠</span>
-                <span>Olheiro IA · Fórmula de Cálculo Ponderado</span>
-              </div>
-              <span className="text-[11px] text-slate-400">
-                Padrão Allejo Anos 90 + Hierarquia de Elenco
+          {/* 1. POSIÇÃO */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                1. Posição em Campo
+              </label>
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-800/60">
+                {POSITION_LABELS[position]}
               </span>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  1. Atleta Real
-                </label>
-                <input
-                  value={realName}
-                  onChange={(e) => setRealName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Ex: Ronaldinho Gaúcho"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  2. Clube / Seleção
-                </label>
-                <input
-                  value={teamOrSelection}
-                  onChange={(e) => setTeamOrSelection(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Ex: Brasil / Barcelona"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  3. Ano / Época
-                </label>
-                <input
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Ex: 2002"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  4. Campeonato
-                </label>
-                <input
-                  value={championship}
-                  onChange={(e) => setChampionship(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Ex: Copa do Mundo 2002"
-                />
-              </div>
-            </div>
-
-            {/* Hierarquia & Modificadores de Escala */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-slate-800/80">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Nível da Competição
-                </label>
-                <select
-                  value={competitionTier}
-                  onChange={(e) => {
-                    const val = e.target.value as CompetitionTier;
-                    setCompetitionTier(val);
-                    applyCalculatedOverall(baseScore, val, squadRole);
-                  }}
-                  className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                >
-                  {(Object.keys(COMPETITION_LABELS) as CompetitionTier[]).map((tierKey) => (
-                    <option key={tierKey} value={tierKey}>
-                      {COMPETITION_LABELS[tierKey]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Status no Elenco
-                </label>
-                <select
-                  value={squadRole}
-                  onChange={(e) => {
-                    const val = e.target.value as SquadRole;
-                    setSquadRole(val);
-                    applyCalculatedOverall(baseScore, competitionTier, val);
-                  }}
-                  className="w-full bg-slate-900 border border-slate-800 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                >
-                  {(Object.keys(ROLE_LABELS) as SquadRole[]).map((roleKey) => (
-                    <option key={roleKey} value={roleKey}>
-                      {ROLE_LABELS[roleKey]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[11px] font-semibold text-slate-300 mb-1">
-                  <span>Base do Atleta:</span>
-                  <span className="text-emerald-400 font-bold">{baseScore}</span>
-                </div>
-                <input
-                  type="range"
-                  min={40}
-                  max={90}
-                  value={baseScore}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setBaseScore(val);
-                    applyCalculatedOverall(val, competitionTier, squadRole);
-                  }}
-                  className="w-full accent-emerald-500 cursor-pointer mt-2"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                onClick={handleScoutAthlete}
-                disabled={aiBusy}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-950/60 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-              >
-                <span>{aiBusy ? "⏳" : "✨"}</span>
-                <span>{aiBusy ? "Pesquisando Histórico com IA..." : "Analisar e Preencher com IA"}</span>
-              </button>
-
-              {aiSuccess && (
-                <span className="text-xs text-emerald-300 bg-emerald-950/80 border border-emerald-800/60 px-3 py-1 rounded-lg">
-                  ✓ {aiSuccess}
-                </span>
-              )}
-            </div>
-
-            {aiError && (
-              <div className="text-xs text-rose-300 bg-rose-950/80 border border-rose-800/60 p-2.5 rounded-xl">
-                ⚠️ {aiError}
-              </div>
-            )}
-
-            {visualPrompt && (
-              <div className="text-xs text-slate-300 bg-slate-900 p-3 border border-slate-800 rounded-xl leading-relaxed">
-                <b className="text-emerald-400">💡 Ideia visual para Caricatura / Ilustração:</b> {visualPrompt}
-              </div>
-            )}
-          </div>
-
-          {/* CARD BASIC FIELDS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <Field label="Lado da Carta">
-              <select
-                value={side}
-                onChange={(e) => setSide(e.target.value as "P" | "AI")}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-              >
-                <option value="P">👤 Jogador (P)</option>
-                <option value="AI">🤖 Adversário IA (AI)</option>
-              </select>
-            </Field>
-
-            <Field label="Posição Tática" className="md:col-span-2">
-              <select
-                value={position}
-                onChange={(e) => setPosition(e.target.value as Position)}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-              >
-                {POSITIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p} — {POSITION_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Nome / Apelido Retrô na Carta" className="md:col-span-3">
-              <input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 text-white font-bold uppercase rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                placeholder="Ex: ROMARINHO PEIXE"
-              />
-            </Field>
-
-            <Field label="Frase de Efeito (Crônica / Várzea)" className="md:col-span-3">
-              <input
-                value={quote}
-                onChange={(e) => setQuote(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                placeholder="Ex: Bico na gaveta e faro de gol característico dos anos 90!"
-              />
-            </Field>
-          </div>
-
-          {/* ATTRIBUTES SECTION */}
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-200">Atributos da Posição ({POSITION_LABELS[position]})</span>
-              <span className="text-slate-500 text-[11px]">Escala de 40 a 99</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
-              {attrKeys.map((k) => (
-                <Field key={k} label={ATTR_LABELS[k]}>
-                  <div className="flex items-center gap-2.5">
-                    <input
-                      type="range"
-                      min={40}
-                      max={99}
-                      value={attrs[k] ?? 75}
-                      onChange={(e) => setAttrs({ ...attrs, [k]: Number(e.target.value) })}
-                      className="w-full accent-emerald-500 cursor-pointer"
-                    />
-                    <input
-                      type="number"
-                      min={40}
-                      max={99}
-                      value={attrs[k] ?? 75}
-                      onChange={(e) => setAttrs({ ...attrs, [k]: Number(e.target.value) })}
-                      className="w-14 text-center bg-slate-900 border border-slate-800 text-white font-bold rounded-lg py-1 text-xs"
-                    />
-                  </div>
-                </Field>
-              ))}
+            
+            <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+              {POSITIONS.map((p) => {
+                const isSelected = position === p;
+                const badgeColor = getPositionBadgeColor(p);
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPosition(p)}
+                    className={`py-2 px-1 rounded-xl font-mono text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center ${
+                      isSelected
+                        ? `${badgeColor} ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-105 shadow-md`
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white"
+                    }`}
+                  >
+                    <span>{POSITION_SHORT[p]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* PACK ATTACHMENT */}
+          {/* 2. DECK (COLEÇÃO / MOLDURA) */}
           <div className="space-y-2">
-            <label className="block text-xs font-semibold text-slate-300">
-              Vincular aos Pacotes & Molduras
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              2. Deck / Coleção Temática
             </label>
             <div className="flex flex-wrap gap-2">
-              {packs.length === 0 && <span className="text-xs text-slate-500">Nenhum pacote cadastrado.</span>}
               {packs.map((p) => {
                 const active = packIds.includes(p.id) || packIds.includes(p.slug) || (p.slug === FOUNDER_SLUG && packIds.includes("founder"));
                 const theme = getPackTheme(p.slug);
@@ -472,14 +261,14 @@ export function CardEditorModal({
                     key={p.id}
                     type="button"
                     onClick={() => togglePack(p)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border ${
                       active
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-950 font-bold"
-                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-slate-700 hover:text-white"
+                        ? "bg-slate-100 text-slate-950 border-white shadow-md font-bold"
+                        : "bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
                     }`}
                   >
                     <span
-                      className="w-2.5 h-2.5 rounded-full border border-black/30"
+                      className="w-3 h-3 rounded-full border border-black/40"
                       style={{ backgroundColor: theme.border }}
                     />
                     <span>{active ? "✓ " : ""}{p.name}</span>
@@ -489,43 +278,206 @@ export function CardEditorModal({
             </div>
           </div>
 
-          {/* ACTION BUTTONS */}
-          <div className="flex gap-2.5 flex-wrap pt-4 border-t border-slate-800">
+          {/* 3. NOME REAL & 4. NOME CARTA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
+            
+            {/* 3. Nome Real */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                3. Nome Real
+              </label>
+              <input
+                type="text"
+                value={realName}
+                onChange={(e) => handleRealNameChange(e.target.value)}
+                placeholder="Ex: Dida, Ronaldo, Neto, Zetti..."
+                className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium outline-none transition-all placeholder:text-slate-500"
+              />
+              <p className="text-[11px] text-slate-400">
+                Ao digitar, o <b>Nome Carta</b> é preenchido automaticamente.
+              </p>
+            </div>
+
+            {/* 4. Nome Carta */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  4. Nome Carta (Paródia Retrô)
+                </label>
+              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: DADI, Ranoldo, veto..."
+                className="w-full bg-slate-900 border border-emerald-600/70 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40 text-emerald-300 font-bold rounded-xl px-3.5 py-2.5 text-sm uppercase tracking-wide outline-none transition-all"
+                required
+              />
+              
+              {/* Suggestion Chips */}
+              {suggestions.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] text-slate-500 font-semibold">Sugestões:</span>
+                  {suggestions.map((sugg) => (
+                    <button
+                      key={sugg}
+                      type="button"
+                      onClick={() => handlePickSuggestion(sugg)}
+                      className={`text-[11px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer font-bold ${
+                        name.toLowerCase() === sugg.toLowerCase()
+                          ? "bg-emerald-600 text-white border-emerald-500 shadow"
+                          : "bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:text-white"
+                      }`}
+                    >
+                      {sugg}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 5. FRASE DE EFEITO */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+              5. Frase de Efeito
+            </label>
+            <textarea
+              rows={2}
+              value={quote}
+              onChange={(e) => setQuote(e.target.value)}
+              placeholder="Citação ou frase marcante dos anos 90 impressa no verso da carta..."
+              className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-200 rounded-xl px-3.5 py-2 text-xs outline-none transition-all placeholder:text-slate-500 resize-none"
+            />
+          </div>
+
+          {/* 6. ATRIBUTOS (POR POSIÇÃO) */}
+          <div className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                6. Atributos da Posição ({POSITION_SHORT[position]})
+              </label>
+
+              {/* Overall badge preview */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">Média Geral:</span>
+                <span className="font-mono text-sm font-black px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  {ovr}
+                </span>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${
+                  rarity === "lendaria" ? "bg-amber-500/20 text-amber-300 border border-amber-500/50" :
+                  rarity === "epica" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50" :
+                  rarity === "rara" ? "bg-blue-500/20 text-blue-300 border border-blue-500/50" :
+                  "bg-slate-800 text-slate-300"
+                }`}>
+                  {rarity}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {attrKeys.map((k) => {
+                const val = attrs[k] ?? 75;
+                const label = ATTR_LABELS[k] ?? k.toUpperCase();
+                return (
+                  <div key={k} className="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-300">{label}</span>
+                      <span className={`font-mono text-xs font-black px-2 py-0.5 rounded ${
+                        val >= 90 ? "bg-amber-500/20 text-amber-300" :
+                        val >= 80 ? "bg-emerald-500/20 text-emerald-300" :
+                        val >= 70 ? "bg-blue-500/20 text-blue-300" :
+                        "bg-slate-800 text-slate-400"
+                      }`}>
+                        {val}
+                      </span>
+                    </div>
+
+                    {/* Fast increment/decrement buttons & input */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateAttr(k, -5, true)}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        -5
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={val}
+                        onChange={(e) => updateAttr(k, parseInt(e.target.value) || 50)}
+                        className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 font-mono text-xs font-bold text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateAttr(k, 5, true)}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        +5
+                      </button>
+                    </div>
+
+                    {/* Smooth slider */}
+                    <input
+                      type="range"
+                      min={40}
+                      max={99}
+                      value={val}
+                      onChange={(e) => updateAttr(k, parseInt(e.target.value))}
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 7. BOTÕES DE AÇÃO NA ORDEM EXATA */}
+          <div className="flex items-center gap-3 pt-4 border-t border-slate-800 flex-wrap">
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-950 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-950/60 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              💾 Salvar Carta
+              <span>💾</span> Salvar Carta
             </button>
-            {!initial.id && onSaveAndNew && (
+
+            {onSaveAndNew && (
               <button
                 type="button"
-                onClick={handleSaveAndNew}
+                onClick={handleSaveNext}
                 disabled={!name.trim()}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-950 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-950/60 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                ➕ Salvar e Criar Próxima
+                <span>➕</span> Salvar e Criar Próxima
               </button>
             )}
+
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-slate-800 transition-colors cursor-pointer"
+              className="px-5 py-3 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-slate-800 transition-colors cursor-pointer ml-auto"
             >
               Cancelar
             </button>
           </div>
+
         </div>
 
-        {/* RIGHT COLUMN: LIVE MOLDURA / CARD STUDIO PREVIEW */}
-        <div className="lg:sticky lg:top-20 bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col items-center gap-4 shadow-xl">
+        {/* RIGHT COLUMN: REAL-TIME STUDIO CARD PREVIEW */}
+        <div className="lg:col-span-4 lg:sticky lg:top-20 bg-slate-950 border border-slate-800 rounded-3xl p-5 flex flex-col items-center gap-4 shadow-xl">
           <div className="text-center w-full">
             <div className="text-xs font-bold text-white uppercase tracking-wider">
-              Moldura em Tempo Real
+              Visualização em Tempo Real
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5">
-              Tema: <b className="text-emerald-400">{activeTheme.label}</b>
+              Moldura: <b className="text-emerald-400">{activeTheme.label}</b>
             </div>
           </div>
 
@@ -534,27 +486,30 @@ export function CardEditorModal({
             <CardView card={previewCard} />
           </div>
 
-          {/* Theme & Rarity Specs Box */}
-          <div className="w-full bg-slate-900 border border-slate-800 p-3 text-xs space-y-2 rounded-xl text-slate-300">
+          {/* Theme & Rarity Specs */}
+          <div className="w-full bg-slate-900/90 border border-slate-800/80 p-3 text-xs space-y-2 rounded-2xl text-slate-300">
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Raridade:</span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                rarity === "lendaria" ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : rarity === "epica" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" : rarity === "rara" ? "bg-blue-500/20 text-blue-300 border border-blue-500/40" : "bg-slate-800 text-slate-300"
+                rarity === "lendaria" ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" :
+                rarity === "epica" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" :
+                rarity === "rara" ? "bg-blue-500/20 text-blue-300 border border-blue-500/40" :
+                "bg-slate-800 text-slate-300"
               }`}>
                 {rarity.toUpperCase()}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Borda / Molde:</span>
+              <span className="text-slate-400">Borda Temática:</span>
               <span className="font-mono text-white text-[11px] flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full border border-black/40" style={{ backgroundColor: activeTheme.border }} />
                 {activeTheme.border}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Badge do Pacote:</span>
-              <span className="font-mono text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-white">
-                {activeTheme.badge ?? "Nenhum"}
+              <span className="text-slate-400">Badge da Coleção:</span>
+              <span className="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-300 border border-slate-700">
+                {activeTheme.badge ?? "ZTT"}
               </span>
             </div>
           </div>
@@ -562,15 +517,5 @@ export function CardEditorModal({
 
       </div>
     </form>
-  );
-}
-
-function Field({ label, children, className, help }: { label: string; children: React.ReactNode; className?: string; help?: string }) {
-  return (
-    <label className={`block ${className ?? ""}`}>
-      <div className="text-[11px] font-semibold text-slate-300 mb-1.5">{label}</div>
-      {children}
-      {help && <div className="mt-1 text-[11px] leading-snug text-slate-500">{help}</div>}
-    </label>
   );
 }

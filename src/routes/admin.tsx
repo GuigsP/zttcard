@@ -621,7 +621,7 @@ function DashboardStatsBar({ cards, packs }: { cards: DBCard[]; packs: DBPack[] 
   const founderP = founderCards.filter((c) => c.side === "P").length;
   const founderAI = founderCards.filter((c) => c.side === "AI").length;
 
-  const corinthiansCards = cards.filter((c) => cardBelongsToPack(c, "corinthians-90", packs)).length;
+  const psjCards = cards.filter((c) => cardBelongsToPack(c, "parque-sao-jorge-90", packs)).length;
   const copa90Cards = cards.filter((c) => cardBelongsToPack(c, "copa-90", packs)).length;
   const copa94Cards = cards.filter((c) => cardBelongsToPack(c, "copa-94", packs)).length;
   const copa98Cards = cards.filter((c) => cardBelongsToPack(c, "copa-98", packs)).length;
@@ -681,7 +681,7 @@ function DashboardStatsBar({ cards, packs }: { cards: DBCard[]; packs: DBPack[] 
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           <span className="bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md">
-            SCCP 90: <b className="text-white">{corinthiansCards}</b>
+            PSJ 90: <b className="text-white">{psjCards}</b>
           </span>
           <span className="bg-emerald-950 text-emerald-300 border border-emerald-800/60 text-[10px] font-semibold px-2 py-0.5 rounded-md">
             Copa 90: <b className="text-white">{copa90Cards}</b>

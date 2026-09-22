@@ -238,7 +238,7 @@ function PackEditor({
                 value={name}
                 onChange={(e) => onNameChange(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                placeholder="Ex: Corinthians 90"
+                placeholder="Ex: Parque São Jorge 90"
               />
             </label>
             <label className="block">
@@ -251,10 +251,10 @@ function PackEditor({
                   setSlugTouched(true);
                 }}
                 className="w-full bg-slate-900 border border-slate-800 hover:border-slate-700 text-white font-mono text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                placeholder="ex: corinthians-90"
+                placeholder="ex: parque-sao-jorge-90"
               />
               <div className="mt-1 text-[11px] text-slate-500">
-                Determina o tema visual da moldura (ex: corinthians-90, copa-90, copa-94).
+                Determina o tema visual da moldura (ex: parque-sao-jorge-90, copa-90, copa-94).
               </div>
             </label>
           </div>
