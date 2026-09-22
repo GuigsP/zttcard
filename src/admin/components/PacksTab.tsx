@@ -234,6 +234,17 @@ function PackEditor({
     initialMeta.frameConfig?.paletteIndex ?? initialTheme.paletteIndex ?? 0
   );
 
+  const defaultColors: [string, string, string] =
+    initialMeta.frameConfig?.colors ||
+    initialTheme.paletteColors ||
+    [initialTheme.border, initialTheme.topBg, initialTheme.accent];
+
+  const [colors, setColors] = useState<[string, string, string]>([
+    defaultColors[0] || "#0a0f1f",
+    defaultColors[1] || "#151e36",
+    defaultColors[2] || "#00e5ff",
+  ]);
+
   function onNameChange(v: string) {
     setName(v);
     if (!slugTouched) setSlug(slugify(v));
@@ -244,18 +255,28 @@ function PackEditor({
   // Atualiza cache em tempo real para o CardView renderizar a prévia imediatamente
   useEffect(() => {
     if (cleanSlug) {
-      setCustomFrameConfig(cleanSlug, frameStyle, paletteIndex);
+      setCustomFrameConfig(cleanSlug, frameStyle, paletteIndex, colors);
     }
-  }, [cleanSlug, frameStyle, paletteIndex]);
+  }, [cleanSlug, frameStyle, paletteIndex, colors]);
 
   function handleSelectFrame(style: FrameStyle) {
     setFrameStyle(style);
-    setCustomFrameConfig(cleanSlug, style, paletteIndex);
+    setCustomFrameConfig(cleanSlug, style, paletteIndex, colors);
   }
 
   function handleSelectPalette(idx: number) {
     setPaletteIndex(idx);
-    setCustomFrameConfig(cleanSlug, frameStyle, idx);
+    const preset = BASE_NAVY_PALETTES[idx]?.colors || BASE_NAVY_PALETTES[0].colors;
+    const newColors: [string, string, string] = [preset[0], preset[1], preset[2]];
+    setColors(newColors);
+    setCustomFrameConfig(cleanSlug, frameStyle, idx, newColors);
+  }
+
+  function updateColor(colorIndex: 0 | 1 | 2, hex: string) {
+    const next: [string, string, string] = [...colors];
+    next[colorIndex] = hex;
+    setColors(next);
+    setCustomFrameConfig(cleanSlug, frameStyle, paletteIndex, next);
   }
 
   function submit(e: React.FormEvent) {
@@ -263,8 +284,8 @@ function PackEditor({
     const clean = slugify(slug);
     if (!name.trim() || !clean) return;
 
-    setCustomFrameConfig(clean, frameStyle, paletteIndex);
-    const finalDescription = embedFrameInDescription(description, frameStyle, paletteIndex);
+    setCustomFrameConfig(clean, frameStyle, paletteIndex, colors);
+    const finalDescription = embedFrameInDescription(description, frameStyle, paletteIndex, colors);
 
     onSave({
       id: initial.id,
@@ -380,60 +401,61 @@ function PackEditor({
             </div>
           </div>
 
-          {/* 🎨 SEÇÃO 2: TROCAR DE COR (3 OPÇÕES COM 3 CORES BASEADAS EM #0a0f1f) */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+          {/* 🎨 SEÇÃO 2: TROCAR DE COR & PALETAS */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="text-xs font-bold text-white flex items-center gap-1.5">
                 <span>🎨</span>
-                <span>Trocar de Cor (3 Cores • Base Modelo #0a0f1f)</span>
+                <span>Trocar de Cor (Paletas Padrões & Ajuste Livre)</span>
               </div>
               <span className="text-[11px] text-cyan-400 font-mono">
                 {activePalette.name}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            {/* Presets Rápidos */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {BASE_NAVY_PALETTES.map((pal, idx) => {
-                const isSelected = paletteIndex === idx;
+                const isSelected = paletteIndex === idx && colors[0] === pal.colors[0] && colors[1] === pal.colors[1] && colors[2] === pal.colors[2];
                 return (
                   <button
                     key={pal.id}
                     type="button"
                     onClick={() => handleSelectPalette(idx)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       isSelected
                         ? "bg-slate-800/90 border-cyan-400 shadow-md shadow-cyan-950/50 ring-1 ring-cyan-400"
                         : "bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60"
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-bold text-white">{pal.name}</span>
                       {isSelected && (
-                        <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.2 rounded font-semibold">
-                          Ativa
+                        <span className="text-[9px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.2 rounded font-semibold">
+                          Padrão
                         </span>
                       )}
                     </div>
                     {/* Exibição das 3 Cores Lado a Lado */}
-                    <div className="flex items-center gap-1.5 p-1.5 bg-slate-950 rounded-lg border border-slate-800/80">
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-800/80">
                       <div
-                        className="flex-1 h-6 rounded flex items-center justify-center text-[8px] font-mono font-bold text-white/90 border border-white/20 shadow-inner"
+                        className="flex-1 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold text-white/90 border border-white/20 shadow-inner"
                         style={{ backgroundColor: pal.colors[0] }}
-                        title={`Cor 1 (Borda/Base): ${pal.colors[0]}`}
+                        title={`Cor 1: ${pal.colors[0]}`}
                       >
                         Borda
                       </div>
                       <div
-                        className="flex-1 h-6 rounded flex items-center justify-center text-[8px] font-mono font-bold text-white/90 border border-white/20 shadow-inner"
+                        className="flex-1 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold text-white/90 border border-white/20 shadow-inner"
                         style={{ backgroundColor: pal.colors[1] }}
-                        title={`Cor 2 (Topo): ${pal.colors[1]}`}
+                        title={`Cor 2: ${pal.colors[1]}`}
                       >
                         Topo
                       </div>
                       <div
-                        className="flex-1 h-6 rounded flex items-center justify-center text-[8px] font-mono font-bold text-slate-900 border border-white/20 shadow-inner"
+                        className="flex-1 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold text-slate-900 border border-white/20 shadow-inner"
                         style={{ backgroundColor: pal.colors[2] }}
-                        title={`Cor 3 (Destaque/Accent): ${pal.colors[2]}`}
+                        title={`Cor 3: ${pal.colors[2]}`}
                       >
                         Acento
                       </div>
@@ -441,6 +463,89 @@ function PackEditor({
                   </button>
                 );
               })}
+            </div>
+
+            {/* 🖌️ AJUSTE FINO INDIVIDUAL DAS 3 CORES */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <div className="text-[11px] font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
+                <span>🖌️</span>
+                <span>Editar as 3 Cores Manualmente (Color Picker ou Hexadecimal)</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                
+                {/* Cor 1: Borda */}
+                <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl space-y-1.5">
+                  <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>1. Cor da Borda</span>
+                    <span className="font-mono text-emerald-400">{colors[0]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={colors[0].startsWith("#") && colors[0].length === 7 ? colors[0] : "#0a0f1f"}
+                      onChange={(e) => updateColor(0, e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-slate-700 bg-transparent cursor-pointer p-0.5"
+                      title="Clique para escolher a cor da borda"
+                    />
+                    <input
+                      type="text"
+                      value={colors[0]}
+                      onChange={(e) => updateColor(0, e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-800 text-white font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="#0a0f1f"
+                    />
+                  </div>
+                </div>
+
+                {/* Cor 2: Topo */}
+                <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl space-y-1.5">
+                  <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>2. Cor do Topo</span>
+                    <span className="font-mono text-emerald-400">{colors[1]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={colors[1].startsWith("#") && colors[1].length === 7 ? colors[1] : "#151e36"}
+                      onChange={(e) => updateColor(1, e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-slate-700 bg-transparent cursor-pointer p-0.5"
+                      title="Clique para escolher a cor do cabeçalho"
+                    />
+                    <input
+                      type="text"
+                      value={colors[1]}
+                      onChange={(e) => updateColor(1, e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-800 text-white font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="#151e36"
+                    />
+                  </div>
+                </div>
+
+                {/* Cor 3: Destaque */}
+                <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-xl space-y-1.5">
+                  <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>3. Destaque / Acento</span>
+                    <span className="font-mono text-emerald-400">{colors[2]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={colors[2].startsWith("#") && colors[2].length === 7 ? colors[2] : "#00e5ff"}
+                      onChange={(e) => updateColor(2, e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-slate-700 bg-transparent cursor-pointer p-0.5"
+                      title="Clique para escolher a cor de destaque"
+                    />
+                    <input
+                      type="text"
+                      value={colors[2]}
+                      onChange={(e) => updateColor(2, e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-800 text-white font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="#00e5ff"
+                    />
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
 
@@ -535,22 +640,22 @@ function PackEditor({
             <div className="flex justify-between items-center">
               <span>Cor da Borda:</span>
               <div className="flex items-center gap-1.5 font-mono font-bold text-white">
-                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: liveTheme.border }} />
-                <span>{liveTheme.border}</span>
+                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: colors[0] }} />
+                <span>{colors[0]}</span>
               </div>
             </div>
             <div className="flex justify-between items-center">
               <span>Cor do Topo:</span>
               <div className="flex items-center gap-1.5 font-mono font-bold text-white">
-                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: liveTheme.topBg }} />
-                <span>{liveTheme.topBg}</span>
+                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: colors[1] }} />
+                <span>{colors[1]}</span>
               </div>
             </div>
             <div className="flex justify-between items-center">
               <span>Destaque/Acento:</span>
               <div className="flex items-center gap-1.5 font-mono font-bold text-white">
-                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: liveTheme.accent }} />
-                <span>{liveTheme.accent}</span>
+                <span className="w-2.5 h-2.5 rounded-full border border-black/30" style={{ backgroundColor: colors[2] }} />
+                <span>{colors[2]}</span>
               </div>
             </div>
           </div>

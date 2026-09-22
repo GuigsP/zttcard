@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AttrKey, Card, Position } from "./types";
 import { buildDeck } from "./data";
 import cardsJsonData from "./cards.json";
+import { parseFrameFromDescription, setCustomFrameConfig } from "./packThemes";
 
 export type DBCard = {
   id: string;
@@ -419,6 +420,15 @@ export async function listPacks(): Promise<DBPack[]> {
     if (!error && data && data.length > 0) {
       for (const p of data as unknown as DBPack[]) {
         packMap.set(p.slug, p);
+        const parsed = parseFrameFromDescription(p.description);
+        if (parsed.frameConfig) {
+          setCustomFrameConfig(
+            p.slug,
+            parsed.frameConfig.frameStyle,
+            parsed.frameConfig.paletteIndex,
+            parsed.frameConfig.colors
+          );
+        }
       }
     }
   } catch {
@@ -430,7 +440,18 @@ export async function listPacks(): Promise<DBPack[]> {
   if (localPacksRaw) {
     try {
       const list = JSON.parse(localPacksRaw) as DBPack[];
-      list.forEach((p) => packMap.set(p.slug, p));
+      list.forEach((p) => {
+        packMap.set(p.slug, p);
+        const parsed = parseFrameFromDescription(p.description);
+        if (parsed.frameConfig) {
+          setCustomFrameConfig(
+            p.slug,
+            parsed.frameConfig.frameStyle,
+            parsed.frameConfig.paletteIndex,
+            parsed.frameConfig.colors
+          );
+        }
+      });
     } catch {
       // ignore
     }
