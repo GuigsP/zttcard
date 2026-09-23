@@ -23,6 +23,8 @@ export function getMasterCatalog(): CatalogCard[] {
         rarity,
         marketValue: sellPrice,
         isExclusive: checkIsCardExclusive(cardId),
+        imageUrl: card.image_url ?? (card.attrs as any)?._image_url ?? (card.attrs as any)?.image_url ?? null,
+        clubBadgeUrl: card.club_badge_url ?? (card.attrs as any)?._club_badge_url ?? (card.attrs as any)?.club_badge_url ?? null,
       };
     });
   }

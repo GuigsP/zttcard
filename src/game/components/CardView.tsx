@@ -65,8 +65,25 @@ export function CardView({
         className={`relative z-10 flex items-start justify-between pt-1 ${small ? "px-1.5" : "px-2"}`}
         style={{ backgroundColor: theme.topBg, color: theme.topFg }}
       >
-        <div className="font-arcade text-[8px] leading-tight min-w-0 truncate flex-shrink">
-          {small ? POSITION_SHORT[card.position] : POSITION_LABELS[card.position]}
+        <div className="font-arcade text-[8px] leading-tight min-w-0 truncate flex-shrink flex items-center gap-1">
+          {card.clubBadgeUrl && (
+            <span
+              className="inline-flex items-center justify-center flex-shrink-0"
+              title="Escudo do Clube"
+            >
+              {card.clubBadgeUrl.startsWith("http") || card.clubBadgeUrl.startsWith("/") ? (
+                <img
+                  src={card.clubBadgeUrl}
+                  alt="Escudo"
+                  className={`${small ? "w-3.5 h-3.5" : "w-4.5 h-4.5"} object-contain rounded-xs drop-shadow-xs`}
+                  loading="lazy"
+                />
+              ) : (
+                <span className={small ? "text-xs" : "text-sm"}>{card.clubBadgeUrl}</span>
+              )}
+            </span>
+          )}
+          <span>{small ? POSITION_SHORT[card.position] : POSITION_LABELS[card.position]}</span>
         </div>
         <div className={`flex items-center flex-shrink-0 ${small ? "gap-1" : "gap-1.5"}`}>
           {theme.badge && (
@@ -99,42 +116,75 @@ export function CardView({
         small={small}
       />
 
-      {/* 4. NOME DO JOGADOR */}
-      <div className={`flex-1 flex items-center justify-center text-center min-w-0 relative z-10 ${small ? "px-1" : "px-2"}`}>
-        {small ? (
-          <svg
-            viewBox="0 0 100 20"
-            preserveAspectRatio="xMidYMid meet"
-            className="w-full"
-            style={{ height: 28 }}
-            aria-label={card.name}
+      {/* 4. RETRATO DO JOGADOR + NOME (OU NOME EM DESTAQUE) */}
+      {card.imageUrl ? (
+        <div className={`flex-1 flex flex-col items-center justify-center min-w-0 relative z-10 ${small ? "px-1.5 py-0.5" : "px-2 py-1"}`}>
+          {/* Portrait Container */}
+          <div
+            className={`w-full relative overflow-hidden rounded-md border-2 border-arcade-dark/30 shadow-inner flex items-center justify-center bg-arcade-dark/10 ${
+              small ? "h-[54px]" : "h-[90px]"
+            }`}
           >
-            <text
-              x="50"
-              y="15"
-              textAnchor="middle"
-              textLength="96"
-              lengthAdjust="spacingAndGlyphs"
+            <img
+              src={card.imageUrl}
+              alt={card.name}
+              className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </div>
+
+          {/* Nome do Jogador */}
+          <div className="w-full text-center mt-1">
+            <div
+              className="uppercase tracking-wider font-bold truncate text-arcade-dark drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
               style={{
                 fontFamily: theme.nameFont,
-                fontSize: 16,
-                fill: "currentColor",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
+                fontSize: small ? 11 : 14,
+                lineHeight: 1.1,
               }}
+              title={card.name}
             >
               {card.name.toUpperCase()}
-            </text>
-          </svg>
-        ) : (
-          <div
-            className="uppercase tracking-wider break-words hyphens-auto w-full text-xl leading-tight"
-            style={{ fontFamily: theme.nameFont }}
-          >
-            {card.name.toUpperCase()}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className={`flex-1 flex items-center justify-center text-center min-w-0 relative z-10 ${small ? "px-1" : "px-2"}`}>
+          {small ? (
+            <svg
+              viewBox="0 0 100 20"
+              preserveAspectRatio="xMidYMid meet"
+              className="w-full"
+              style={{ height: 28 }}
+              aria-label={card.name}
+            >
+              <text
+                x="50"
+                y="15"
+                textAnchor="middle"
+                textLength="96"
+                lengthAdjust="spacingAndGlyphs"
+                style={{
+                  fontFamily: theme.nameFont,
+                  fontSize: 16,
+                  fill: "currentColor",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {card.name.toUpperCase()}
+              </text>
+            </svg>
+          ) : (
+            <div
+              className="uppercase tracking-wider break-words hyphens-auto w-full text-xl leading-tight"
+              style={{ fontFamily: theme.nameFont }}
+            >
+              {card.name.toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 5. ATRIBUTOS TÁTICOS */}
       <div className="px-2 pb-2 space-y-1 relative z-10">

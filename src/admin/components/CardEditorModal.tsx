@@ -45,6 +45,10 @@ export function CardEditorModal({
   // 5. Frase de Efeito
   const [quote, setQuote] = useState(initial.quote ?? "");
 
+  // 6. Caricatura (Google Flow) & Escudo do Clube Fictício
+  const [imageUrl, setImageUrl] = useState((initial as any).image_url ?? (initial.attrs as any)?._image_url ?? "");
+  const [clubBadgeUrl, setClubBadgeUrl] = useState((initial as any).club_badge_url ?? (initial.attrs as any)?._club_badge_url ?? "");
+
   // Legacy ID (internal)
   const [legacyId] = useState(initial.legacy_id ?? "");
 
@@ -161,6 +165,8 @@ export function CardEditorModal({
       attrs,
       quote: quote.trim(),
       pack_ids: packIds,
+      image_url: imageUrl.trim() || null,
+      club_badge_url: clubBadgeUrl.trim() || null,
     };
   }
 
@@ -190,6 +196,8 @@ export function CardEditorModal({
     quote: quote.trim() || "Frase lendária do craque dos anos 90.",
     cardNumber: initial.card_number,
     packSlug: previewPackSlug,
+    imageUrl: imageUrl.trim() || null,
+    clubBadgeUrl: clubBadgeUrl.trim() || null,
   };
 
   function getPositionBadgeColor(p: Position) {
@@ -387,6 +395,67 @@ export function CardEditorModal({
               placeholder="Citação ou frase marcante dos anos 90 impressa no verso da carta..."
               className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-200 rounded-xl px-3.5 py-2 text-xs outline-none transition-all placeholder:text-slate-500 resize-none"
             />
+          </div>
+
+          {/* 6. CARICATURA & ESCUDO FICTÍCIO */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+            {/* Imagem / Caricatura do Jogador */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                6. Caricatura do Jogador (URL)
+              </label>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://... ou cole o link da foto do Google Flow"
+                className="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none transition-all placeholder:text-slate-500"
+              />
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Gere a caricatura no Google Flow e cole o link da imagem aqui.
+              </p>
+            </div>
+
+            {/* Escudo do Clube Fictício */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                7. Escudo do Clube Fictício
+              </label>
+              <input
+                type="text"
+                value={clubBadgeUrl}
+                onChange={(e) => setClubBadgeUrl(e.target.value)}
+                placeholder="URL da imagem ou emoji (ex: 🦁, ⚡, ⭐)"
+                className="w-full bg-slate-900 border border-slate-700 focus:border-cyan-400 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none transition-all placeholder:text-slate-500"
+              />
+              
+              {/* Sugestões rápidas de Brasões Fictícios */}
+              <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                <span className="text-[9px] text-slate-500 font-semibold">Atalhos:</span>
+                {["🦁", "🦅", "⚡", "⭐", "👑", "🛡️", "🐺", "⚽", "🔥", "🌪️", "⚓"].map((badge) => (
+                  <button
+                    key={badge}
+                    type="button"
+                    onClick={() => setClubBadgeUrl(badge)}
+                    className="w-6 h-6 rounded bg-slate-800 hover:bg-cyan-600/40 border border-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                    title={`Usar brasão ${badge}`}
+                  >
+                    {badge}
+                  </button>
+                ))}
+                {clubBadgeUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setClubBadgeUrl("")}
+                    className="text-[9px] text-rose-400 hover:underline ml-1"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* 6. ATRIBUTOS (POR POSIÇÃO) */}

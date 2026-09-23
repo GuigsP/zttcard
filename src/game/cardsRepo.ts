@@ -14,9 +14,11 @@ export type DBCard = {
   real_name: string | null;
   card_number: number;
   ovr: number;
-  attrs: Record<string, number>;
+  attrs: Record<string, any>;
   quote: string;
   pack_ids: string[];
+  image_url?: string | null;
+  club_badge_url?: string | null;
 };
 
 export type DBPack = {
@@ -47,6 +49,9 @@ function toCard(row: DBCard): Card {
   if (row.position === "M10" && row.attrs?.finalizacao == null && attrs.criacao != null && attrs.passe != null && attrs.finalizacao != null) {
     ovr = Math.round((attrs.criacao + attrs.passe + attrs.finalizacao) / 3);
   }
+  const imageUrl = row.image_url ?? (row.attrs as any)?._image_url ?? (row.attrs as any)?.image_url ?? null;
+  const clubBadgeUrl = row.club_badge_url ?? (row.attrs as any)?._club_badge_url ?? (row.attrs as any)?.club_badge_url ?? null;
+
   return {
     id: row.legacy_id ?? row.id,
     name: (row.name ?? "").toUpperCase(),
@@ -55,6 +60,8 @@ function toCard(row: DBCard): Card {
     attrs: attrs as Partial<Record<AttrKey, number>>,
     quote: row.quote ?? "",
     cardNumber: row.card_number,
+    imageUrl,
+    clubBadgeUrl,
   };
 }
 
@@ -155,6 +162,8 @@ export async function listAllCards(): Promise<DBCard[]> {
           attrs: r.attrs,
           quote: r.quote,
           pack_ids: resolvedPacks,
+          image_url: r.image_url ?? (r.attrs as any)?._image_url ?? (r.attrs as any)?.image_url ?? null,
+          club_badge_url: r.club_badge_url ?? (r.attrs as any)?._club_badge_url ?? (r.attrs as any)?.club_badge_url ?? null,
         };
         cardMap.set(c.id, c);
       }
@@ -247,6 +256,8 @@ export type UpsertCardInput = {
   attrs: Record<string, number>;
   quote: string;
   pack_ids: string[];
+  image_url?: string | null;
+  club_badge_url?: string | null;
 };
 
 function computeOvr(attrs: Record<string, number>): number {
@@ -261,6 +272,12 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
     ? (input.tier ?? 0)
     : (typeof input.tier === "number" ? input.tier : Math.floor(Math.random() * 3));
 
+  const payloadAttrs = {
+    ...input.attrs,
+    ...(input.image_url ? { _image_url: input.image_url } : {}),
+    ...(input.club_badge_url ? { _club_badge_url: input.club_badge_url } : {}),
+  };
+
   const payload: Record<string, any> = {
     side: input.side,
     position: input.position,
@@ -268,7 +285,7 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
     name: (input.name ?? "").trim().toUpperCase(),
     real_name: input.real_name ?? null,
     ovr,
-    attrs: input.attrs,
+    attrs: payloadAttrs,
     quote: input.quote,
   };
   if (input.legacy_id) {
@@ -343,6 +360,8 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
       attrs: input.attrs,
       quote: input.quote,
       pack_ids: input.pack_ids,
+      image_url: input.image_url ?? null,
+      club_badge_url: input.club_badge_url ?? null,
     };
     const updated = existing
       ? list.map((c) => (c.id === existing.id ? newCard : c))
