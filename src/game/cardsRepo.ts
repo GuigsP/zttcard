@@ -390,7 +390,17 @@ export async function resetToDefaultDeck(): Promise<void> {
   }
 }
 
-export async function isAdmin(userId: string): Promise<boolean> {
+export const ADMIN_EMAILS = [
+  "glmpenna@hotmail.com",
+];
+
+export async function isAdmin(userId?: string | null, email?: string | null): Promise<boolean> {
+  const cleanEmail = (email || "").toLowerCase().trim();
+  if (cleanEmail && ADMIN_EMAILS.includes(cleanEmail)) {
+    return true;
+  }
+  if (!userId) return false;
+
   try {
     const { data, error } = await supabase
       .from("user_roles")
@@ -398,11 +408,11 @@ export async function isAdmin(userId: string): Promise<boolean> {
       .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
-    if (!error && data) return true;
+    if (!error && data && data.role === "admin") return true;
   } catch {
     // ignore
   }
-  return true;
+  return false;
 }
 
 // ---- Packs ----

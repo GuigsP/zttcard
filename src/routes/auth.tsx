@@ -2,12 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+import { isAdmin, ADMIN_EMAILS } from "@/game/cardsRepo";
+
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
   head: () => ({
     meta: [
-      { title: "Entrar — Zero to Top | Card" },
-      { name: "description", content: "Entre para gerenciar as cartas do Zero to Top | Card." },
+      { title: "Entrar — Zero to Top | Card Studio" },
+      { name: "description", content: "Acesso restrito ao Painel do Administrador." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
 });
@@ -22,8 +25,13 @@ function AuthPage() {
   const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/admin" });
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        const ok = await isAdmin(data.user.id, data.user.email);
+        if (ok) {
+          navigate({ to: "/admin" });
+        }
+      }
     });
   }, [navigate]);
 
@@ -32,31 +40,36 @@ function AuthPage() {
     setLoading(true);
     setError(null);
     setInfo(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       if (mode === "signup") {
-        try {
-          const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: window.location.origin + "/admin" },
-          });
-          if (error) throw error;
-          setInfo("Conta criada. Entre com seu e-mail e senha.");
-          setMode("login");
-        } catch {
-          setInfo("Conta local configurada. Você pode entrar.");
-          setMode("login");
+        if (!ADMIN_EMAILS.includes(cleanEmail)) {
+          throw new Error("O cadastro no Studio é restrito a e-mails autorizados pela administração.");
         }
+        const { error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: { emailRedirectTo: window.location.origin + "/admin" },
+        });
+        if (error) throw error;
+        setInfo("Conta de administrador criada com sucesso. Faça login.");
+        setMode("login");
       } else {
-        try {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) {
-            console.warn("Supabase auth fallback to local dev admin:", error.message);
-          }
-        } catch {
-          // Local fallback
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (error) throw error;
+        if (!data.user) throw new Error("Usuário não encontrado.");
+
+        const authorized = await isAdmin(data.user.id, data.user.email);
+        if (!authorized) {
+          await supabase.auth.signOut();
+          throw new Error("Acesso negado: esta conta não possui privilégios de administrador.");
         }
-        localStorage.setItem("ztt.admin.session", email);
+
         navigate({ to: "/admin" });
       }
     } catch (err) {

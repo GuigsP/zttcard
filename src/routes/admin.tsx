@@ -73,43 +73,45 @@ function AdminPage() {
     let mounted = true;
     (async () => {
       try {
-        const localSession = typeof window !== "undefined" ? localStorage.getItem("ztt.admin.session") : null;
-        const { data } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+        const { data, error: userError } = await supabase.auth.getUser();
         if (!mounted) return;
         const user = data?.user;
 
-        if (!user && !localSession) {
+        if (userError || !user) {
           setStatus("unauth");
           return;
         }
 
-        const email = user?.email || localSession || "glmpenna@hotmail.com";
+        const email = user.email || "";
         setUserEmail(email);
 
-        if (user) {
-          const ok = await isAdmin(user.id).catch(() => true);
-          if (!ok && !localSession) {
-            setStatus("forbidden");
-            return;
-          }
+        const authorized = await isAdmin(user.id, email);
+        if (!authorized) {
+          setStatus("forbidden");
+          return;
         }
 
         await refresh();
         if (mounted) setStatus("ready");
       } catch (err) {
         if (mounted) {
-          console.warn("Admin init fallback:", err);
-          await refresh().catch(() => {});
-          setStatus("ready");
+          console.error("Erro na verificação de administrador:", err);
+          setStatus("forbidden");
         }
       }
     })();
-    const sub = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        if (typeof window !== "undefined") localStorage.removeItem("ztt.admin.session");
+
+    const sub = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
         navigate({ to: "/auth" });
+      } else if (session?.user) {
+        const authorized = await isAdmin(session.user.id, session.user.email);
+        if (!authorized) {
+          setStatus("forbidden");
+        }
       }
     });
+
     return () => {
       mounted = false;
       try {
@@ -121,7 +123,6 @@ function AdminPage() {
   }, [navigate]);
 
   async function signOut() {
-    if (typeof window !== "undefined") localStorage.removeItem("ztt.admin.session");
     await supabase.auth.signOut().catch(() => {});
     navigate({ to: "/auth" });
   }
@@ -306,12 +307,20 @@ function AdminPage() {
               Faça login com sua conta de administrador para gerenciar o catálogo de cartas.
             </p>
           </div>
-          <Link
-            to="/auth"
-            className="block w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-emerald-900/30"
-          >
-            Ir para Login
-          </Link>
+          <div className="space-y-2.5">
+            <Link
+              to="/auth"
+              className="block w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-emerald-900/30"
+            >
+              Ir para Login
+            </Link>
+            <Link
+              to="/"
+              className="block w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-xl transition-colors"
+            >
+              ← Voltar ao Jogo
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -330,12 +339,20 @@ function AdminPage() {
               A conta <span className="font-semibold text-slate-200">{userEmail}</span> não tem permissão para acessar o painel.
             </p>
           </div>
-          <button
-            onClick={signOut}
-            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition-colors"
-          >
-            Sair da Conta
-          </button>
+          <div className="space-y-2.5">
+            <button
+              onClick={signOut}
+              className="w-full py-3 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 text-red-200 font-semibold rounded-xl transition-colors"
+            >
+              Sair da Conta
+            </button>
+            <Link
+              to="/"
+              className="block w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-xl transition-colors"
+            >
+              ← Voltar ao Jogo
+            </Link>
+          </div>
         </div>
       </div>
     );

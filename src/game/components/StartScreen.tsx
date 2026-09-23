@@ -9,8 +9,10 @@ import {
   canCurrentPlayerAccessPack,
   isPackExclusive,
   grantExclusiveCardsToOwner,
+  ADMIN_EMAILS,
   type DBPack,
 } from "../cardsRepo";
+import { supabase } from "@/integrations/supabase/client";
 import { OnlineBadge } from "../multiplayer/OnlineBadge";
 import {
   canClaimDailyFree,
@@ -56,6 +58,17 @@ export function StartScreen({
   const [activeSection, setActiveSection] = useState<MenuSection>("jogar");
   const [gameStep, setGameStep] = useState<GameStep>("select_mode");
   const [selectedPack, setSelectedPack] = useState<string>(initialPack);
+
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const email = data?.user?.email?.toLowerCase().trim();
+      if (email && ADMIN_EMAILS.includes(email)) {
+        setIsAdminUser(true);
+      }
+    }).catch(() => {});
+  }, []);
 
   const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => {
     return getCachedPacks().filter(
@@ -199,15 +212,21 @@ export function StartScreen({
           </div>
         </div>
 
-        {/* Footer Admin Link */}
+        {/* Footer Admin Link (apenas se admin logado) */}
         <div className="pt-3 mt-3 border-t border-arcade-yellow/30 hidden md:flex items-center justify-between">
-          <Link
-            to="/admin"
-            className="font-arcade text-[9px] text-arcade-cream/70 hover:text-arcade-yellow transition-colors flex items-center gap-1.5"
-          >
-            <span>⚙️</span>
-            <span>PAINEL ADMIN</span>
-          </Link>
+          {isAdminUser ? (
+            <Link
+              to="/admin"
+              className="font-arcade text-[9px] text-arcade-cream/70 hover:text-arcade-yellow transition-colors flex items-center gap-1.5"
+            >
+              <span>⚙️</span>
+              <span>PAINEL ADMIN</span>
+            </Link>
+          ) : (
+            <span className="font-arcade text-[8px] text-arcade-cream/40">
+              ZERO TO TOP
+            </span>
+          )}
           <span className="font-arcade text-[8px] text-arcade-cream/40">
             v2.0
           </span>
