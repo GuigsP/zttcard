@@ -119,14 +119,16 @@ export function CardEditorModal({
 
     // Se o nome da carta está vazio ou se o usuário ainda não personalizou manualmente
     if (primary && (!name || name === lastAutoName)) {
-      setName(primary);
-      setLastAutoName(primary);
+      const up = primary.toUpperCase();
+      setName(up);
+      setLastAutoName(up);
     }
   }
 
   function handlePickSuggestion(sugg: string) {
-    setName(sugg);
-    setLastAutoName(sugg);
+    const up = sugg.toUpperCase();
+    setName(up);
+    setLastAutoName(up);
   }
 
   function updateAttr(key: string, deltaOrVal: number, isDelta = false) {
@@ -154,7 +156,7 @@ export function CardEditorModal({
       side,
       position,
       tier: initial.id ? initial.tier : (ovr >= 85 ? 0 : ovr >= 75 ? 1 : 2),
-      name: name.trim() || (realName.trim() ? realName.trim().toUpperCase() : "CARTA"),
+      name: (name.trim() || realName.trim() || "CARTA").toUpperCase(),
       real_name: realName.trim() || null,
       attrs,
       quote: quote.trim(),
@@ -343,8 +345,8 @@ export function CardEditorModal({
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: DADI, Ranoldo, veto..."
+                onChange={(e) => setName(e.target.value.toUpperCase())}
+                placeholder="Ex: DADI, RANOLDO, VETO..."
                 className="w-full bg-slate-900 border border-emerald-600/70 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40 text-emerald-300 font-bold rounded-xl px-3.5 py-2.5 text-sm uppercase tracking-wide outline-none transition-all"
                 required
               />
@@ -358,13 +360,13 @@ export function CardEditorModal({
                       key={sugg}
                       type="button"
                       onClick={() => handlePickSuggestion(sugg)}
-                      className={`text-[11px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer font-bold ${
-                        name.toLowerCase() === sugg.toLowerCase()
+                      className={`text-[11px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer font-bold uppercase ${
+                        name.toUpperCase() === sugg.toUpperCase()
                           ? "bg-emerald-600 text-white border-emerald-500 shadow"
                           : "bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:text-white"
                       }`}
                     >
-                      {sugg}
+                      {sugg.toUpperCase()}
                     </button>
                   ))}
                 </div>

@@ -131,7 +131,7 @@ export function CardView({
             className="uppercase tracking-wider break-words hyphens-auto w-full text-xl leading-tight"
             style={{ fontFamily: theme.nameFont }}
           >
-            {card.name}
+            {card.name.toUpperCase()}
           </div>
         )}
       </div>

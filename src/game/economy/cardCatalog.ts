@@ -12,7 +12,7 @@ export function getMasterCatalog(): CatalogCard[] {
       const cardId = card.legacy_id ?? card.id;
       return {
         id: cardId,
-        name: card.name,
+        name: (card.name ?? "").toUpperCase(),
         position: card.position,
         ovr: card.ovr,
         attrs: card.attrs as Partial<Record<AttrKey, number>>,
@@ -36,6 +36,7 @@ export function getMasterCatalog(): CatalogCard[] {
     const sellPrice = RARITY_CONFIG[rarity].sellPrice;
     return {
       ...card,
+      name: (card.name ?? "").toUpperCase(),
       slotNumber: idx + 1,
       collection: "fundador",
       rarity,

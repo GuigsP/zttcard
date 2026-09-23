@@ -162,8 +162,8 @@ export function PackOpeningModal({ packName, cards, onClose }: Props) {
 
                         {/* Name & Position */}
                         <div className="my-1 text-center">
-                          <div className="font-arcade text-xs text-arcade-dark truncate">
-                            {item.card.name}
+                          <div className="font-arcade text-xs text-arcade-dark truncate uppercase tracking-wider font-bold">
+                            {item.card.name.toUpperCase()}
                           </div>
                           <div className="font-arcade text-[8px] text-arcade-dark/70">
                             {POSITION_LABELS[item.card.position]}

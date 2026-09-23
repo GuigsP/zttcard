@@ -239,8 +239,8 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
                       <div className="font-arcade text-[9px] text-arcade-red mb-1">
                         #{card.slotNumber} · {card.position}
                       </div>
-                      <div className="font-arcade text-sm text-arcade-yellow truncate mb-1">
-                        {card.name}
+                      <div className="font-arcade text-sm text-arcade-yellow truncate mb-1 uppercase tracking-wider">
+                        {card.name.toUpperCase()}
                       </div>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="font-arcade text-xs px-1.5 py-0.5 bg-arcade-blue text-arcade-yellow border border-arcade-yellow">
@@ -374,8 +374,8 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
                       <div className="font-arcade text-[9px] text-arcade-red">
                         #{card.slotNumber} · {POSITION_LABELS[card.position]}
                       </div>
-                      <div className="font-arcade text-sm text-arcade-yellow truncate my-1">
-                        {card.name}
+                      <div className="font-arcade text-sm text-arcade-yellow truncate my-1 uppercase tracking-wider">
+                        {card.name.toUpperCase()}
                       </div>
 
                       <div className="flex items-center gap-2 mb-3">
@@ -476,8 +476,8 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
                     <div className="font-arcade text-[8px] text-arcade-red">
                       #{card.slotNumber} · {card.position}
                     </div>
-                    <div className="font-arcade text-[10px] truncate">
-                      {card.name}
+                    <div className="font-arcade text-[10px] truncate uppercase tracking-wider">
+                      {card.name.toUpperCase()}
                     </div>
                   </button>
                 ))}

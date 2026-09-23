@@ -389,9 +389,9 @@ export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
                       <td className="p-3.5 font-bold text-white uppercase">
                         <button
                           onClick={() => setPreviewCardModal(c)}
-                          className="hover:text-emerald-400 transition-colors text-left font-bold cursor-pointer"
+                          className="hover:text-emerald-400 transition-colors text-left font-bold cursor-pointer uppercase"
                         >
-                          {c.name}
+                          {(c.name ?? "").toUpperCase()}
                         </button>
                       </td>
                       <td className="p-3.5 text-slate-400">

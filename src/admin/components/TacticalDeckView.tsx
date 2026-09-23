@@ -188,7 +188,7 @@ export function TacticalDeckView({
                             {c.real_name || "—"}
                           </span>
                           <span className="font-bold truncate text-slate-200 uppercase text-[11px]">
-                            {c.name}
+                            {(c.name ?? "").toUpperCase()}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">

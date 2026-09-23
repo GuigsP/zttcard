@@ -49,7 +49,7 @@ function toCard(row: DBCard): Card {
   }
   return {
     id: row.legacy_id ?? row.id,
-    name: row.name,
+    name: (row.name ?? "").toUpperCase(),
     position: row.position,
     ovr,
     attrs: attrs as Partial<Record<AttrKey, number>>,
@@ -148,7 +148,7 @@ export async function listAllCards(): Promise<DBCard[]> {
           side: r.side,
           position: r.position,
           tier: r.tier,
-          name: r.name,
+          name: (r.name ?? "").toUpperCase(),
           real_name: r.real_name ?? null,
           card_number: r.card_number,
           ovr: r.ovr,
@@ -228,7 +228,7 @@ export async function listAllCards(): Promise<DBCard[]> {
         currentPacks.push("587e1406-ea61-4bef-87f5-3d7a3fad5b96");
       }
     }
-    return { ...c, pack_ids: Array.from(new Set(currentPacks)) };
+    return { ...c, name: (c.name || "").toUpperCase(), pack_ids: Array.from(new Set(currentPacks)) };
   });
   if (typeof window !== "undefined") {
     localStorage.setItem(LOCAL_CARDS_KEY, JSON.stringify(result));
@@ -265,7 +265,7 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
     side: input.side,
     position: input.position,
     tier,
-    name: input.name,
+    name: (input.name ?? "").trim().toUpperCase(),
     real_name: input.real_name ?? null,
     ovr,
     attrs: input.attrs,
@@ -712,17 +712,22 @@ export function getCachedPacks(): DBPack[] {
 }
 
 export function getCachedCards(): DBCard[] {
-  if (typeof window === "undefined") return STATIC_CARDS;
-  const raw = localStorage.getItem(LOCAL_CARDS_KEY);
-  if (raw) {
-    try {
-      const list = JSON.parse(raw) as DBCard[];
-      if (Array.isArray(list) && list.length > 0) return list;
-    } catch {
-      // ignore
+  let cards = STATIC_CARDS;
+  if (typeof window !== "undefined") {
+    const raw = localStorage.getItem(LOCAL_CARDS_KEY);
+    if (raw) {
+      try {
+        const list = JSON.parse(raw) as DBCard[];
+        if (Array.isArray(list) && list.length > 0) cards = list;
+      } catch {
+        // ignore
+      }
     }
   }
-  return STATIC_CARDS;
+  return cards.map((c) => ({
+    ...c,
+    name: (c.name || "").toUpperCase(),
+  }));
 }
 
 export function checkIsCardExclusive(cardId: string): boolean {

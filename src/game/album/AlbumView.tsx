@@ -62,8 +62,8 @@ export function AlbumView({ onBack, onOpenShop }: Props) {
                 </span>
               </div>
             )}
-            <div className="font-arcade text-xl text-arcade-yellow mb-1">
-              {selectedCard.name}
+            <div className="font-arcade text-xl text-arcade-yellow mb-1 uppercase tracking-wider">
+              {selectedCard.name.toUpperCase()}
             </div>
             <div className="font-arcade text-[10px] text-arcade-cream/80 mb-3">
               {POSITION_LABELS[selectedCard.position]}
@@ -258,8 +258,8 @@ export function AlbumView({ onBack, onOpenShop }: Props) {
 
               {/* Name & Position */}
               <div className="text-center my-0.5">
-                <div className="font-arcade text-[10px] text-arcade-dark truncate font-bold">
-                  {card.name}
+                <div className="font-arcade text-[10px] text-arcade-dark truncate font-bold uppercase tracking-wider">
+                  {card.name.toUpperCase()}
                 </div>
                 <div className="font-arcade text-[7px] text-arcade-dark/70">
                   {POSITION_LABELS[card.position]}
