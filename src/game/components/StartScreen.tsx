@@ -107,9 +107,58 @@ export function StartScreen({
   };
 
   return (
-    <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col md:flex-row">
-      {/* 1. SIDEBAR LATERAL (MENU ESQUERDO) */}
-      <aside className="w-full md:w-72 bg-arcade-dark border-b-4 md:border-b-0 md:border-r-4 border-arcade-yellow p-4 md:p-6 flex flex-col justify-between shrink-0 shadow-arcade z-20">
+    <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col md:flex-row relative">
+      {/* 0. TOP STATUS BAR (MOBILE ONLY - Clash Royale Style) */}
+      <header className="md:hidden sticky top-0 z-40 bg-arcade-dark/95 backdrop-blur-md border-b-2 border-arcade-yellow px-3 py-2 flex items-center justify-between shadow-lg">
+        {/* Nível & Progresso XP (Clicável -> abre Carteira) */}
+        <button
+          type="button"
+          onClick={() => selectSection("carteira")}
+          className="flex items-center gap-1.5 bg-arcade-blue/70 border border-arcade-yellow/60 rounded px-2 py-1 active:scale-95 transition-transform"
+        >
+          <span className="text-xs">⭐</span>
+          <div className="flex flex-col items-start">
+            <span className="font-arcade text-[9px] text-arcade-yellow leading-none">
+              NV. {playerLevel.level}
+            </span>
+            <div className="w-12 bg-black/60 h-1 rounded-full overflow-hidden mt-0.5 border border-arcade-yellow/30">
+              <div
+                className="bg-gradient-to-r from-arcade-yellow to-amber-500 h-full"
+                style={{ width: `${playerLevel.progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </button>
+
+        {/* Saldo de Moedas ZTT$ (Clicável -> abre Carteira) */}
+        <button
+          type="button"
+          onClick={() => selectSection("carteira")}
+          className="flex items-center gap-1.5 bg-arcade-blue/70 border border-arcade-yellow/60 rounded px-2.5 py-1 active:scale-95 transition-transform shadow-sm"
+        >
+          <span className="text-sm animate-bounce">🪙</span>
+          <span className="font-arcade text-[10px] text-arcade-yellow font-bold leading-none">
+            ZTT$ {wallet.coins.toLocaleString()}
+          </span>
+        </button>
+
+        {/* Ações Rápidas: Online Badge + Tutorial */}
+        <div className="flex items-center gap-1.5">
+          <OnlineBadge />
+          <button
+            type="button"
+            onClick={() => selectSection("tutorial")}
+            title="Como Jogar"
+            aria-label="Como Jogar"
+            className="w-7 h-7 flex items-center justify-center rounded bg-arcade-blue/70 border border-arcade-yellow/60 text-xs active:scale-95 hover:bg-arcade-yellow hover:text-arcade-dark transition-colors"
+          >
+            ❓
+          </button>
+        </div>
+      </header>
+
+      {/* 1. SIDEBAR LATERAL (DESKTOP ONLY) */}
+      <aside className="hidden md:flex flex-col md:w-72 bg-arcade-dark border-r-4 border-arcade-yellow p-4 md:p-6 justify-between shrink-0 shadow-arcade z-20 min-h-screen">
         <div>
           {/* Logo / Header */}
           <div className="text-center md:text-left mb-6">
@@ -234,7 +283,7 @@ export function StartScreen({
       </aside>
 
       {/* 2. PAINEL CENTRAL DINÂMICO (CENTER STAGE) */}
-      <main className="flex-1 flex flex-col justify-center items-center p-4 md:p-10 relative overflow-y-auto">
+      <main className="flex-1 flex flex-col justify-start md:justify-center items-center p-3 sm:p-4 md:p-10 relative overflow-y-auto pb-24 md:pb-10">
         <div className="w-full max-w-3xl flex flex-col items-center">
           {/* SEÇÃO 1: JOGAR */}
           {activeSection === "jogar" && (
@@ -571,6 +620,27 @@ export function StartScreen({
                 </div>
               </div>
 
+              {/* Nível e Progresso de XP */}
+              <div className="w-full bg-arcade-blue/40 border-2 border-arcade-yellow/60 p-3 shadow text-left">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">⭐</span>
+                    <span className="font-arcade text-xs text-arcade-yellow font-bold">
+                      NÍVEL {playerLevel.level} · {playerLevel.title}
+                    </span>
+                  </div>
+                  <span className="font-arcade text-[9px] text-arcade-cream/80">
+                    {playerLevel.xp} XP
+                  </span>
+                </div>
+                <div className="w-full bg-black/60 h-2 rounded-full overflow-hidden border border-arcade-yellow/30 mt-1">
+                  <div
+                    className="bg-gradient-to-r from-arcade-yellow to-amber-500 h-full transition-all duration-300"
+                    style={{ width: `${playerLevel.progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 w-full text-left">
                 <div className="bg-arcade-blue/40 p-3 border border-arcade-yellow">
                   <div className="font-arcade text-[9px] text-arcade-yellow/70">
@@ -637,6 +707,77 @@ export function StartScreen({
           )}
         </div>
       </main>
+
+      {/* 3. BOTTOM NAVIGATION BAR MOBILE (Estilo Clash Royale) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-arcade-dark/95 backdrop-blur-md border-t-3 border-arcade-yellow shadow-[0_-4px_20px_rgba(0,0,0,0.6)] px-2 py-1 flex items-end justify-around pb-[max(0.4rem,env(safe-area-inset-bottom))]">
+        {/* Tab 1: Banca */}
+        <MobileNavTab
+          active={activeSection === "banca"}
+          icon="📰"
+          label="BANCA"
+          badge={dailyStatus.canClaim ? "GRÁTIS!" : undefined}
+          badgeColor="bg-arcade-green text-white animate-pulse"
+          onClick={() => selectSection("banca")}
+        />
+
+        {/* Tab 2: Álbum */}
+        <MobileNavTab
+          active={activeSection === "album"}
+          icon="📖"
+          label="ÁLBUM"
+          badge={`${progressPercent}%`}
+          badgeColor="bg-arcade-blue text-arcade-yellow border border-arcade-yellow/40"
+          onClick={() => selectSection("album")}
+        />
+
+        {/* Tab 3: JOGAR (HERO BUTTON - Estilo Espadas do Clash Royale) */}
+        <button
+          type="button"
+          onClick={() => selectSection("jogar")}
+          className={`flex flex-col items-center justify-center -mt-4 relative transition-all duration-200 active:scale-95 group ${
+            activeSection === "jogar" ? "scale-105" : ""
+          }`}
+        >
+          <div
+            className={`w-13 h-13 rounded-2xl flex items-center justify-center text-2xl border-3 shadow-arcade transition-all ${
+              activeSection === "jogar"
+                ? "bg-gradient-to-b from-arcade-yellow to-amber-500 border-arcade-cream text-arcade-dark shadow-[0_0_15px_rgba(255,204,0,0.7)]"
+                : "bg-gradient-to-b from-arcade-blue to-slate-900 border-arcade-yellow text-arcade-yellow hover:border-arcade-cream"
+            }`}
+          >
+            <span className="group-hover:rotate-12 transition-transform duration-200">
+              ⚽
+            </span>
+          </div>
+          <span
+            className={`font-arcade text-[8px] mt-0.5 tracking-wider ${
+              activeSection === "jogar"
+                ? "text-arcade-yellow font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                : "text-arcade-cream/70"
+            }`}
+          >
+            JOGAR
+          </span>
+        </button>
+
+        {/* Tab 4: Pracinha */}
+        <MobileNavTab
+          active={activeSection === "pracinha"}
+          icon="🌳"
+          label="PRACINHA"
+          badge={duplicates.length > 0 ? `${duplicates.length}x` : undefined}
+          badgeColor="bg-amber-500 text-arcade-dark font-bold"
+          onClick={() => selectSection("pracinha")}
+        />
+
+        {/* Tab 5: Carteira */}
+        <MobileNavTab
+          active={activeSection === "carteira"}
+          icon="🪙"
+          label="CARTEIRA"
+          onClick={() => selectSection("carteira")}
+        />
+      </nav>
     </div>
   );
 }
@@ -674,6 +815,59 @@ function NavItem({
         <span className={`text-[8px] px-1.5 py-0.5 font-bold rounded ${badgeColor}`}>
           {badge}
         </span>
+      )}
+    </button>
+  );
+}
+
+function MobileNavTab({
+  active,
+  icon,
+  label,
+  badge,
+  badgeColor = "bg-arcade-yellow text-arcade-dark",
+  onClick,
+}: {
+  active: boolean;
+  icon: string;
+  label: string;
+  badge?: string;
+  badgeColor?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 relative transition-all duration-150 active:scale-95 ${
+        active ? "text-arcade-yellow" : "text-arcade-cream/60 hover:text-arcade-cream"
+      }`}
+    >
+      <div className="relative flex items-center justify-center">
+        <span
+          className={`text-xl transition-transform ${
+            active ? "scale-110 drop-shadow-[0_2px_4px_rgba(255,204,0,0.4)]" : "opacity-80"
+          }`}
+        >
+          {icon}
+        </span>
+        {badge && (
+          <span
+            className={`absolute -top-1.5 -right-2.5 font-arcade text-[7px] leading-tight px-1 py-0.5 rounded-full font-bold shadow ${badgeColor}`}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      <span
+        className={`font-arcade text-[7.5px] mt-0.5 tracking-wider truncate max-w-full ${
+          active ? "font-bold text-arcade-yellow" : "text-arcade-cream/70"
+        }`}
+      >
+        {label}
+      </span>
+      {active && (
+        <span className="w-1.5 h-1.5 rounded-full bg-arcade-yellow mt-0.5 shadow-[0_0_6px_rgba(255,204,0,0.8)]" />
       )}
     </button>
   );
