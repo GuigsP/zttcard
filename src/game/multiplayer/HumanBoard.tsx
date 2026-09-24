@@ -14,7 +14,7 @@ import { EmojiReactions } from "./EmojiReactions";
 import { MPPenaltyShootout } from "./MPPenaltyShootout";
 import { MPTrapAnnounce } from "./MPTrapAnnounce";
 import { sound } from "../audio";
-import { addCoins } from "../economy/economyService";
+import { addCoins, MATCH_REWARDS } from "../economy/economyService";
 import {
   applyEvent,
   attrsForCurrentPos,
@@ -338,7 +338,8 @@ export function HumanBoard({ code }: Props) {
       const theirGoals = oppGoals(state, myRole);
       const won = myGoals > theirGoals;
       const tie = myGoals === theirGoals;
-      const rewardCoins = won ? 100 : tie ? 50 : 25;
+      const outcome = won ? "win" : tie ? "draw" : "loss";
+      const rewardCoins = MATCH_REWARDS.multiplayer[outcome];
       addCoins(rewardCoins);
       if (won) sound.playVictory();
       sound.playCoinEarn();

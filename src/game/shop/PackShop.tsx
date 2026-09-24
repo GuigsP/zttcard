@@ -38,21 +38,38 @@ export function PackShop({ onBack }: Props) {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleBuyPack = (pack: PackProduct) => {
+  const handleBuyPack = (pack: PackProduct, useAlternativeCurrency = false) => {
     setErrorMessage(null);
-    if (!pack.isDailyFree && wallet.coins < pack.priceCoins) {
-      sound.playPointLost();
-      setErrorMessage("Moedas ZTT insuficientes! Ganhe jogando partidas ou vendendo repetidas.");
-      return;
-    }
 
     if (pack.isDailyFree && !dailyStatus.canClaim) {
       sound.playPointLost();
-      setErrorMessage("Pacote diário já resgatado. Aguarde o cronômetro!");
+      setErrorMessage("Pacote diário já resgatado. Aguarde o cronômetro do jornaleiro!");
       return;
     }
 
-    const res = openPack(pack.id);
+    if (pack.id === "lendas_90s") {
+      if (useAlternativeCurrency) {
+        // Pagamento com Contos (1.500)
+        if (wallet.contos < 1500) {
+          sound.playPointLost();
+          setErrorMessage("Contos insuficientes! São necessários 1.500 Contos para a Caixa Lendas 90s.");
+          return;
+        }
+      } else {
+        // Pagamento com Fichas de Ouro (120)
+        if (wallet.fichasOuro < 120) {
+          sound.playPointLost();
+          setErrorMessage("Fichas de Ouro insuficientes! Adquira na banca ou use 1.500 Contos.");
+          return;
+        }
+      }
+    } else if (!pack.isDailyFree && wallet.contos < pack.priceCoins) {
+      sound.playPointLost();
+      setErrorMessage("Contos insuficientes! Jogue partidas ou venda repetidas para acumular.");
+      return;
+    }
+
+    const res = openPack(pack.id, useAlternativeCurrency);
     if (!res.success) {
       sound.playPointLost();
       setErrorMessage(res.error ?? "Erro ao abrir pacote.");
@@ -82,14 +99,14 @@ export function PackShop({ onBack }: Props) {
       )}
 
       {/* Header */}
-      <div className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+      <div className="max-w-5xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
               sound.playAttrSelect();
               onBack();
             }}
-            className="font-arcade text-[10px] px-3 py-2 bg-arcade-dark text-arcade-yellow border-2 border-arcade-yellow hover:bg-arcade-red transition-colors"
+            className="font-arcade text-[10px] px-3 py-2 bg-arcade-dark text-arcade-yellow border-2 border-arcade-yellow hover:bg-arcade-red transition-colors shadow-arcade active:scale-95"
           >
             ← VOLTAR
           </button>
@@ -104,49 +121,82 @@ export function PackShop({ onBack }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-arcade-dark px-4 py-2 border-2 border-arcade-yellow shadow-arcade">
-          <span className="text-xl">🪙</span>
-          <div className="flex flex-col">
-            <span className="font-arcade text-xs text-arcade-yellow font-bold">
-              {wallet.coins.toLocaleString()}
-            </span>
-            <span className="font-arcade text-[8px] text-arcade-cream/70">
-              SUAS MOEDAS
-            </span>
+        {/* Saldo da Carteira (Contos + Fichas de Ouro) */}
+        <div className="flex items-center gap-3">
+          {/* Contos (Farm) */}
+          <div className="flex items-center gap-2 bg-arcade-dark px-3 py-1.5 border-2 border-arcade-yellow shadow-arcade">
+            <span className="text-lg">🪙</span>
+            <div className="flex flex-col">
+              <span className="font-arcade text-xs text-arcade-yellow font-bold">
+                {wallet.contos.toLocaleString()}
+              </span>
+              <span className="font-arcade text-[8px] text-arcade-cream/70">
+                CONTOS
+              </span>
+            </div>
+          </div>
+
+          {/* Fichas de Ouro (Premium) */}
+          <div className="flex items-center gap-2 bg-arcade-dark px-3 py-1.5 border-2 border-yellow-500 shadow-arcade">
+            <span className="text-lg">🟡</span>
+            <div className="flex flex-col">
+              <span className="font-arcade text-xs text-yellow-400 font-bold">
+                {wallet.fichasOuro.toLocaleString()}
+              </span>
+              <span className="font-arcade text-[8px] text-arcade-cream/70">
+                FICHAS OURO
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="max-w-4xl w-full mx-auto mb-6 p-3 bg-arcade-red border-2 border-arcade-yellow font-arcade text-xs text-arcade-cream text-center animate-shake">
+        <div className="max-w-5xl w-full mx-auto mb-6 p-3 bg-arcade-red border-2 border-arcade-yellow font-arcade text-xs text-arcade-cream text-center animate-shake shadow-arcade">
           ⚠️ {errorMessage}
         </div>
       )}
 
       {/* Store Packs Grid */}
-      <div className="max-w-4xl w-full mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="max-w-5xl w-full mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {STORE_PACKS.map((pack) => {
           const isFree = pack.isDailyFree;
-          const canClaim = isFree ? dailyStatus.canClaim : wallet.coins >= pack.priceCoins;
+          const isLendas = pack.id === "lendas_90s";
 
           return (
             <div
               key={pack.id}
-              className="bg-arcade-dark border-4 border-arcade-yellow p-5 shadow-arcade flex flex-col justify-between items-center text-center gap-4 relative group hover:scale-[1.02] transition-transform"
+              className={`bg-arcade-dark border-4 ${
+                isLendas ? "border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.35)]" : "border-arcade-yellow"
+              } p-5 shadow-arcade flex flex-col justify-between items-center text-center gap-4 relative group hover:scale-[1.02] transition-transform`}
             >
               {/* Top Badge */}
-              <div className="font-arcade text-xs px-3 py-1 bg-arcade-cream text-arcade-dark border-2 border-arcade-dark font-bold">
+              <div
+                className={`font-arcade text-xs px-3 py-1 border-2 font-bold ${
+                  isLendas
+                    ? "bg-yellow-400 text-arcade-dark border-arcade-dark animate-pulse"
+                    : isFree
+                    ? "bg-arcade-green text-arcade-cream border-arcade-dark"
+                    : "bg-arcade-cream text-arcade-dark border-arcade-dark"
+                }`}
+              >
                 {pack.badge}
               </div>
 
               {/* Pack Illustration */}
-              <div className="w-28 h-36 bg-gradient-to-tr from-amber-600 to-yellow-400 border-4 border-arcade-cream rounded shadow-lg flex flex-col items-center justify-center p-2 relative group-hover:rotate-2 transition-transform">
-                <span className="text-3xl mb-1">📦</span>
+              <div
+                className={`w-28 h-36 ${
+                  isLendas
+                    ? "bg-gradient-to-tr from-amber-500 via-yellow-300 to-yellow-500 border-4 border-yellow-200"
+                    : "bg-gradient-to-tr from-amber-600 to-yellow-400 border-4 border-arcade-cream"
+                } rounded shadow-lg flex flex-col items-center justify-center p-2 relative group-hover:rotate-2 transition-transform`}
+              >
+                <span className="text-3xl mb-1">{isLendas ? "👑" : "📦"}</span>
                 <span className="font-arcade text-[9px] text-arcade-dark font-bold">
                   {pack.cardsCount} CARTAS
                 </span>
                 {pack.guaranteedRarity && (
-                  <span className="font-arcade text-[7px] bg-arcade-dark text-arcade-yellow px-1 mt-1 rounded">
+                  <span className="font-arcade text-[7px] bg-arcade-dark text-arcade-yellow px-1 mt-1 rounded font-bold">
                     ★ {pack.guaranteedRarity} ★
                   </span>
                 )}
@@ -161,10 +211,10 @@ export function PackShop({ onBack }: Props) {
                 </p>
               </div>
 
-              {/* Action Button */}
+              {/* Action Button(s) */}
               <div className="w-full">
                 {isFree ? (
-                  canClaim ? (
+                  dailyStatus.canClaim ? (
                     <button
                       onClick={() => handleBuyPack(pack)}
                       className="w-full font-arcade text-xs py-3 bg-arcade-green text-arcade-cream border-2 border-arcade-yellow shadow-arcade hover:bg-arcade-yellow hover:text-arcade-dark active:scale-95 transition-all animate-bounce"
@@ -179,12 +229,37 @@ export function PackShop({ onBack }: Props) {
                       </span>
                     </div>
                   )
+                ) : isLendas ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleBuyPack(pack, false)}
+                      disabled={wallet.fichasOuro < 120}
+                      className={`w-full font-arcade text-xs py-2.5 border-2 transition-all ${
+                        wallet.fichasOuro >= 120
+                          ? "bg-yellow-400 text-arcade-dark border-yellow-200 shadow-arcade hover:bg-yellow-300 active:scale-95 cursor-pointer font-bold"
+                          : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
+                      }`}
+                    >
+                      🟡 120 FICHAS OURO
+                    </button>
+                    <button
+                      onClick={() => handleBuyPack(pack, true)}
+                      disabled={wallet.contos < 1500}
+                      className={`w-full font-arcade text-xs py-2.5 border-2 transition-all ${
+                        wallet.contos >= 1500
+                          ? "bg-arcade-yellow text-arcade-dark border-arcade-cream shadow-arcade hover:bg-arcade-red hover:text-arcade-cream active:scale-95 cursor-pointer"
+                          : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
+                      }`}
+                    >
+                      🪙 1.500 CONTOS
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => handleBuyPack(pack)}
-                    disabled={!canClaim}
+                    disabled={wallet.contos < pack.priceCoins}
                     className={`w-full font-arcade text-xs py-3 border-2 transition-all ${
-                      canClaim
+                      wallet.contos >= pack.priceCoins
                         ? "bg-arcade-yellow text-arcade-dark border-arcade-cream shadow-arcade hover:bg-arcade-red hover:text-arcade-cream active:scale-95 cursor-pointer"
                         : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
                     }`}
@@ -199,12 +274,12 @@ export function PackShop({ onBack }: Props) {
       </div>
 
       {/* Info footer */}
-      <div className="max-w-4xl w-full mx-auto mt-10 p-4 bg-arcade-dark/70 border-2 border-arcade-yellow/40 text-center">
+      <div className="max-w-5xl w-full mx-auto mt-10 p-4 bg-arcade-dark/70 border-2 border-arcade-yellow/40 text-center">
         <div className="font-arcade text-xs text-arcade-yellow mb-1">
-          💡 COMO FUNCIONA A COLEÇÃO?
+          💡 COMO FUNCIONA A COLEÇÃO E O JORNALEIRO?
         </div>
         <p className="font-body text-xs text-arcade-cream/80 max-w-2xl mx-auto">
-          A primeira cópia de qualquer figurinha que você tirar na <b>Banca de Jornal</b> vai automaticamente e de forma permanente para o seu <b>Álbum Virtual</b>. As cópias repetidas vão para o seu <b>Montinho</b>, onde você pode vendê-las ou trocá-las na <b>Pracinha</b> com outros jogadores!
+          A primeira cópia de qualquer figurinha vai direto e colada no seu <b>Álbum Virtual</b>. As repetidas vão para o seu <b>Montinho</b>, onde você pode reciclá-las por <b>Contos</b> (Comum = 6, Incomum = 20, Rara = 70, Lenda = 250) ou trocá-las com amigos na <b>Pracinha</b>!
         </p>
       </div>
     </div>

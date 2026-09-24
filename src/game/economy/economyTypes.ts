@@ -1,6 +1,29 @@
 import type { Card } from "../types";
 
+// ==========================================
+// 1. TIPOS BÁSICOS DE ECONOMIA E MOEDAS
+// ==========================================
+
+export type CurrencyType = "contos" | "fichasOuro";
+
 export type CardRarity = "COMUM" | "INCOMUM" | "RARA" | "LENDA";
+
+export interface Wallet {
+  contos: number; // Moeda farmável jogando partidas
+  fichasOuro: number; // Moeda premium adquirida com dinheiro real (R$)
+}
+
+// Compatibilidade estendida para componentes legados e persistência de dados
+export interface PlayerWallet extends Wallet {
+  coins: number; // Mapeado 1:1 para contos para manter retrocompatibilidade
+  lastDailyClaim: number | null; // timestamp ms
+  packsOpened: number;
+  tradesCompleted: number;
+}
+
+// ==========================================
+// 2. CONFIGURAÇÃO VISUAL E DE OVR POR RARIDADE
+// ==========================================
 
 export const RARITY_CONFIG: Record<
   CardRarity,
@@ -23,7 +46,7 @@ export const RARITY_CONFIG: Record<
     glowClass: "border-slate-500",
     minOvr: 50,
     maxOvr: 72,
-    sellPrice: 15,
+    sellPrice: 6,
   },
   INCOMUM: {
     label: "INCOMUM",
@@ -33,7 +56,7 @@ export const RARITY_CONFIG: Record<
     glowClass: "border-green-500 shadow-[0_0_12px_rgba(34,197,94,0.4)]",
     minOvr: 73,
     maxOvr: 82,
-    sellPrice: 35,
+    sellPrice: 20,
   },
   RARA: {
     label: "RARA",
@@ -43,7 +66,7 @@ export const RARITY_CONFIG: Record<
     glowClass: "border-blue-500 shadow-[0_0_16px_rgba(59,130,246,0.6)]",
     minOvr: 83,
     maxOvr: 89,
-    sellPrice: 75,
+    sellPrice: 70,
   },
   LENDA: {
     label: "LENDA",
@@ -53,7 +76,7 @@ export const RARITY_CONFIG: Record<
     glowClass: "border-yellow-400 shadow-[0_0_24px_rgba(250,204,21,0.8)] animate-pulse",
     minOvr: 90,
     maxOvr: 99,
-    sellPrice: 200,
+    sellPrice: 250,
   },
 };
 
@@ -64,19 +87,16 @@ export function getCardRarity(ovr: number): CardRarity {
   return "COMUM";
 }
 
+// ==========================================
+// 3. ESTRUTURAS DO CATÁLOGO E INVENTÁRIO
+// ==========================================
+
 export type CatalogCard = Card & {
   slotNumber: number;
   collection: string;
   rarity: CardRarity;
   marketValue: number;
   isExclusive?: boolean;
-};
-
-export type PlayerWallet = {
-  coins: number;
-  lastDailyClaim: number | null; // timestamp ms
-  packsOpened: number;
-  tradesCompleted: number;
 };
 
 export type InventoryItem = {
@@ -86,6 +106,44 @@ export type InventoryItem = {
   duplicatesCount: number; // totalOwned - 1
 };
 
+// ==========================================
+// 4. SISTEMA DE PACOTES, CHANCES E PITY
+// ==========================================
+
+export type PackTier = "diario" | "varzea" | "classico" | "ouro" | "lendas_90s";
+
+export interface PackOdds {
+  COMUM: number;
+  INCOMUM: number;
+  RARA: number;
+  LENDA: number;
+}
+
+export interface PackConfig {
+  id: PackTier;
+  title: string;
+  subtitle: string;
+  cardCount: number;
+  price: {
+    currency: CurrencyType;
+    amount: number;
+  };
+  altPrice?: {
+    currency: CurrencyType;
+    amount: number;
+  };
+  odds: PackOdds;
+  guaranteedRarity?: CardRarity;
+  pityWeight: number;
+  isDailyFree?: boolean;
+}
+
+export interface PlayerPityTracker {
+  packsSinceLastLenda: number;
+  thresholdLendaGuarantee: number;
+}
+
+// Representação de pacote para componentes de UI
 export type PackProduct = {
   id: string;
   name: string;
@@ -97,7 +155,45 @@ export type PackProduct = {
   guaranteedRarity?: CardRarity;
   themeColor: string;
   badge: string;
+  altPrice?: {
+    currency: CurrencyType;
+    amount: number;
+  };
 };
+
+// ==========================================
+// 5. LOJA DE CRÉDITOS R$ E RESULTADOS DE TRANSAÇÃO
+// ==========================================
+
+export interface RealMoneyOffer {
+  id: string;
+  title: string;
+  fichasOuroAwarded: number;
+  bonusFichasOuro: number;
+  priceBRL: number;
+  isPopular?: boolean;
+}
+
+export interface CardRecycleResult {
+  soldCardsCount: number;
+  contosEarned: number;
+  updatedWallet: Wallet;
+}
+
+export interface OpenPackResult {
+  cards: any[];
+  costPaid: {
+    currency: CurrencyType;
+    amount: number;
+  } | null;
+  updatedWallet: Wallet;
+  updatedPity: PlayerPityTracker;
+  hasLenda: boolean;
+}
+
+// ==========================================
+// 6. MERCADO E TROCAS P2P
+// ==========================================
 
 export type TradeListing = {
   id: string;

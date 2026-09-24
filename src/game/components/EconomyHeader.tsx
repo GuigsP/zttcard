@@ -37,7 +37,14 @@ export function EconomyHeader({
         <div className="flex items-center gap-1.5 bg-arcade-blue/60 px-3 py-1 border-2 border-arcade-yellow rounded-sm">
           <span className="text-base animate-bounce">🪙</span>
           <span className="font-arcade text-xs text-arcade-yellow font-bold tracking-wider">
-            ZTT$ {wallet.coins.toLocaleString()}
+            {wallet.contos.toLocaleString()} <span className="text-[9px] text-arcade-cream/70 font-normal">CONTOS</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 bg-yellow-950/60 px-2.5 py-1 border-2 border-yellow-400 rounded-sm">
+          <span className="text-base">🟡</span>
+          <span className="font-arcade text-xs text-yellow-300 font-bold tracking-wider">
+            {wallet.fichasOuro.toLocaleString()} <span className="text-[9px] text-yellow-100/70 font-normal">FICHAS</span>
           </span>
         </div>
 

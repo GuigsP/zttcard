@@ -19,6 +19,8 @@ import {
   getDuplicatesList,
   getPlayerInventory,
   getPlayerWallet,
+  MATCH_REWARDS,
+  REAL_MONEY_STORE,
 } from "../economy/economyService";
 import { getMasterCatalog } from "../economy/cardCatalog";
 import { getPlayerLevel } from "../playerLevel";
@@ -156,17 +158,25 @@ export function StartScreen({
             </div>
           </button>
 
-          {/* Saldo de Moedas ZTT$ (Clicável -> abre Carteira) */}
+          {/* Saldo de Moedas (Clicável -> abre Carteira) */}
           <button
             type="button"
             onClick={() => selectSection("carteira")}
-            className="flex items-center gap-1.5 sm:gap-2 bg-arcade-blue/70 hover:bg-arcade-blue border border-arcade-yellow/60 hover:border-arcade-yellow rounded-lg px-2 sm:px-3.5 py-1 sm:py-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
-            title="Sua Carteira ZTT$"
+            className="flex items-center gap-1.5 sm:gap-2 bg-arcade-blue/70 hover:bg-arcade-blue border border-arcade-yellow/60 hover:border-arcade-yellow rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
+            title="Sua Carteira: Contos e Fichas de Ouro"
           >
-            <span className="text-sm sm:text-base animate-bounce">🪙</span>
-            <span className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold leading-none">
-              ZTT$ {wallet.coins.toLocaleString()}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-xs sm:text-sm animate-bounce">🪙</span>
+              <span className="font-arcade text-[9px] sm:text-xs text-arcade-yellow font-bold leading-none">
+                {wallet.contos.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 pl-1 border-l border-arcade-yellow/40">
+              <span className="text-xs sm:text-sm">🟡</span>
+              <span className="font-arcade text-[9px] sm:text-xs text-yellow-300 font-bold leading-none">
+                {wallet.fichasOuro.toLocaleString()}
+              </span>
+            </div>
           </button>
 
           {/* Online Status Badge */}
@@ -532,16 +542,51 @@ export function StartScreen({
             </div>
           )}
 
-          {/* SEÇÃO 5: MINHA CARTEIRA (ZTT$) */}
+          {/* SEÇÃO 5: MINHA CARTEIRA & BANCA DE FICHAS */}
           {activeSection === "carteira" && (
-            <div className="w-full max-w-xl bg-arcade-dark border-4 border-arcade-yellow p-6 shadow-arcade flex flex-col items-center text-center gap-5 animate-in fade-in duration-200">
-              <span className="text-4xl animate-bounce">🪙</span>
+            <div className="w-full max-w-2xl bg-arcade-dark border-4 border-arcade-yellow p-6 shadow-arcade flex flex-col items-center text-center gap-5 animate-in fade-in duration-200">
               <div>
-                <h2 className="font-arcade text-lg text-arcade-yellow mb-1">
-                  MINHA CARTEIRA ZTT$
+                <h2 className="font-arcade text-lg sm:text-xl text-arcade-yellow mb-1 flex items-center justify-center gap-2">
+                  <span>💼</span>
+                  <span>MINHA CARTEIRA</span>
                 </h2>
-                <div className="font-arcade text-2xl text-arcade-cream mt-2 bg-arcade-blue/80 px-4 py-2 border-2 border-arcade-yellow inline-block">
-                  ZTT$ {wallet.coins.toLocaleString()}
+                <p className="font-body text-xs text-arcade-cream/80">
+                  Gerencie seus Contos conquistados nos gramados e suas Fichas de Ouro da banca!
+                </p>
+              </div>
+
+              {/* Cards de Saldo Duplo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                {/* Contos */}
+                <div className="bg-arcade-blue/80 border-2 border-arcade-yellow p-4 shadow-arcade flex items-center gap-3 text-left">
+                  <span className="text-3xl animate-bounce">🪙</span>
+                  <div>
+                    <span className="font-arcade text-[9px] text-arcade-yellow/80">
+                      CONTOS (FARMÁVEL)
+                    </span>
+                    <div className="font-arcade text-xl sm:text-2xl text-arcade-yellow font-bold leading-tight">
+                      {wallet.contos.toLocaleString()}
+                    </div>
+                    <span className="font-body text-[10px] text-arcade-cream/70">
+                      Moeda das partidas e do descarte
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fichas de Ouro */}
+                <div className="bg-yellow-950/60 border-2 border-yellow-400 p-4 shadow-arcade flex items-center gap-3 text-left">
+                  <span className="text-3xl">🟡</span>
+                  <div>
+                    <span className="font-arcade text-[9px] text-yellow-300/80">
+                      FICHAS DE OURO (PREMIUM)
+                    </span>
+                    <div className="font-arcade text-xl sm:text-2xl text-yellow-400 font-bold leading-tight">
+                      {wallet.fichasOuro.toLocaleString()}
+                    </div>
+                    <span className="font-body text-[10px] text-arcade-cream/70">
+                      Moeda para pacotes lendários
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -566,6 +611,7 @@ export function StartScreen({
                 </div>
               </div>
 
+              {/* Estatísticas */}
               <div className="grid grid-cols-2 gap-3 w-full text-left">
                 <div className="bg-arcade-blue/40 p-3 border border-arcade-yellow">
                   <div className="font-arcade text-[9px] text-arcade-yellow/70">
@@ -586,12 +632,69 @@ export function StartScreen({
                 </div>
               </div>
 
+              {/* Loja de Fichas de Ouro (Tabela R$) */}
+              <div className="w-full text-left mt-2">
+                <h3 className="font-arcade text-xs text-arcade-yellow mb-2 flex items-center gap-1.5">
+                  <span>🏪</span>
+                  <span>BANCA DE FICHAS DE OURO (TABELA OFICIAL)</span>
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {REAL_MONEY_STORE.map((offer) => (
+                    <div
+                      key={offer.id}
+                      className={`p-3 border-2 flex flex-col justify-between gap-2 relative ${
+                        offer.isPopular
+                          ? "bg-yellow-950/80 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)]"
+                          : "bg-arcade-blue/40 border-arcade-yellow/60"
+                      }`}
+                    >
+                      {offer.isPopular && (
+                        <span className="absolute -top-2.5 right-2 font-arcade text-[8px] bg-yellow-400 text-arcade-dark px-1.5 py-0.5 font-bold">
+                          MAIS POPULAR
+                        </span>
+                      )}
+                      <div>
+                        <div className="font-arcade text-xs text-arcade-yellow font-bold">
+                          {offer.title}
+                        </div>
+                        <div className="font-arcade text-base text-yellow-300 font-bold mt-1">
+                          🟡 {offer.fichasOuroAwarded}{" "}
+                          {offer.bonusFichasOuro > 0 && (
+                            <span className="text-[10px] text-green-400 font-normal">
+                              (+{offer.bonusFichasOuro} bônus)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-arcade-yellow/30">
+                        <span className="font-arcade text-xs text-arcade-cream font-bold">
+                          R$ {offer.priceBRL.toFixed(2).replace(".", ",")}
+                        </span>
+                        <span className="font-arcade text-[8px] text-arcade-yellow/80 bg-arcade-dark px-1.5 py-0.5 border border-arcade-yellow/50">
+                          BANCA
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Diretrizes da Economia */}
               <div className="bg-arcade-dark/90 p-3 border border-arcade-yellow/40 text-left w-full text-xs font-body text-arcade-cream/80">
-                <b>💡 Como ganhar mais ZTT$?</b>
-                <ul className="list-disc list-inside mt-1 space-y-0.5">
-                  <li>Vença partidas no modo Solo (+50 ZTT$) ou 1x1 Humano (+100 ZTT$).</li>
-                  <li>Venda figurinhas repetidas do seu Montinho na Pracinha.</li>
-                  <li>Resgate seu pacote grátis diário na Banca de Jornal.</li>
+                <b className="text-arcade-yellow font-arcade text-[10px]">💡 REGRAS DA ECONOMIA:</b>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>
+                    <b>Recompensas Solo:</b> Vitória: +{MATCH_REWARDS.solo.win} Contos · Empate: +{MATCH_REWARDS.solo.draw} Contos · Derrota: +{MATCH_REWARDS.solo.loss} Contos.
+                  </li>
+                  <li>
+                    <b>Recompensas Multiplayer:</b> Vitória: +{MATCH_REWARDS.multiplayer.win} Contos · Empate: +{MATCH_REWARDS.multiplayer.draw} Contos · Derrota: +{MATCH_REWARDS.multiplayer.loss} Contos.
+                  </li>
+                  <li>
+                    <b>Reciclagem Anti-inflacionária:</b> Comum = 6 Contos · Incomum = 20 Contos · Rara = 70 Contos · Lenda = 250 Contos.
+                  </li>
+                  <li>
+                    <b>Pacote Diário:</b> 3 cartas gratuitas a cada 24 horas na Banca de Jornal!
+                  </li>
                 </ul>
               </div>
             </div>

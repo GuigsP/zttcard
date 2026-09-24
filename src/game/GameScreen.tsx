@@ -19,7 +19,7 @@ import { EconomyHeader } from "./components/EconomyHeader";
 import { AlbumView } from "./album/AlbumView";
 import { PackShop } from "./shop/PackShop";
 import { TradingCenter } from "./trades/TradingCenter";
-import { addCoins } from "./economy/economyService";
+import { addCoins, MATCH_REWARDS } from "./economy/economyService";
 import { sound } from "./audio";
 
 type Screen = "start" | "playing" | "end" | "matchmaking" | "album" | "shop" | "trades";
@@ -77,7 +77,8 @@ export function GameScreen() {
     // Economy match reward
     const won = result.goals.p > result.goals.ai;
     const tie = result.goals.p === result.goals.ai;
-    const rewardCoins = won ? 50 : tie ? 25 : 10;
+    const outcome = won ? "win" : tie ? "draw" : "loss";
+    const rewardCoins = MATCH_REWARDS.solo[outcome];
     addCoins(rewardCoins);
     sound.playCoinEarn();
 
