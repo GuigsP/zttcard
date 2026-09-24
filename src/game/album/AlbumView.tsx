@@ -76,17 +76,17 @@ export function AlbumView({ onBack, onOpenShop }: Props) {
             <div className="font-arcade text-xl text-arcade-yellow mb-1 uppercase tracking-wider flex items-center justify-center gap-2">
               {selectedCard.clubBadgeUrl && (
                 <span>
-                  {selectedCard.clubBadgeUrl.startsWith("http") || selectedCard.clubBadgeUrl.startsWith("/") ? (
+                  {typeof selectedCard.clubBadgeUrl === "string" && (selectedCard.clubBadgeUrl.startsWith("http") || selectedCard.clubBadgeUrl.startsWith("/")) ? (
                     <img src={selectedCard.clubBadgeUrl} alt="Escudo" className="w-6 h-6 object-contain inline-block drop-shadow" />
                   ) : (
-                    <span className="text-lg">{selectedCard.clubBadgeUrl}</span>
+                    <span className="text-lg">{String(selectedCard.clubBadgeUrl)}</span>
                   )}
                 </span>
               )}
-              <span>{selectedCard.name.toUpperCase()}</span>
+              <span>{(selectedCard.name || "").toUpperCase()}</span>
             </div>
             <div className="font-arcade text-[10px] text-arcade-cream/80 mb-3">
-              {POSITION_LABELS[selectedCard.position]}
+              {POSITION_LABELS[selectedCard.position] ?? selectedCard.position ?? "JOGADOR"}
             </div>
 
             <div className="flex justify-center items-center gap-3 my-4">

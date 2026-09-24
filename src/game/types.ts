@@ -65,6 +65,7 @@ export type Card = {
   packSlug?: string;
   imageUrl?: string | null;
   clubBadgeUrl?: string | null;
+  tier?: number;
 };
 
 export type Trap = "AMARELO" | "IMPEDIMENTO" | "PENALTI";

@@ -1,7 +1,7 @@
 import { buildDeck } from "../data";
 import type { Card, AttrKey } from "../types";
 import { type CatalogCard, getCardRarity, RARITY_CONFIG } from "./economyTypes";
-import { getCachedCards, checkIsCardExclusive } from "../cardsRepo";
+import { getCachedCards, checkIsCardExclusive, type DBCard } from "../cardsRepo";
 
 export function getMasterCatalog(): CatalogCard[] {
   const dbCards = getCachedCards();
