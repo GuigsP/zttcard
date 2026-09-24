@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { sound } from "../audio";
 
-export function RetroBoombox() {
+interface RetroBoomboxProps {
+  floating?: boolean;
+  defaultExpanded?: boolean;
+}
+
+export function RetroBoombox({ floating = false, defaultExpanded = false }: RetroBoomboxProps = {}) {
   const [isPlaying, setIsPlaying] = useState(sound.isRadioPlaying());
   const [station, setStation] = useState(sound.getRadioStation());
   const [isMuted, setIsMuted] = useState(sound.isMuted());
@@ -10,6 +15,20 @@ export function RetroBoombox() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [playbackTime, setPlaybackTime] = useState(sound.getCurrentPlaybackTime());
   const [trackNumber, setTrackNumber] = useState(sound.getCurrentTrackNumber());
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("ztt.walkman.expanded");
+      if (saved !== null) return saved === "true";
+    }
+    return defaultExpanded;
+  });
+
+  const toggleExpanded = (val: boolean) => {
+    setIsExpanded(val);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ztt.walkman.expanded", String(val));
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = sound.subscribeRadio(() => {
@@ -44,15 +63,31 @@ export function RetroBoombox() {
     setTimeout(() => setToastMessage(null), 2400);
   };
 
-  const handleTogglePlay = () => {
-    sound.toggleRadio();
+  const handleTogglePlay = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const nextState = sound.toggleRadio();
+    setIsPlaying(nextState);
   };
 
-  const handleNextStation = () => {
+  const handleNextStation = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     sound.nextRadioStation();
+    setStation(sound.getRadioStation());
+    setTrackNumber(sound.getCurrentTrackNumber());
+    setPlaybackTime(sound.getCurrentPlaybackTime());
   };
 
-  const handleToggleMute = () => {
+  const handleToggleMute = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const muted = sound.toggleMute();
     setIsMuted(muted);
     setIsPlaying(sound.isRadioPlaying());
@@ -91,12 +126,55 @@ export function RetroBoombox() {
     showToast("📻 SINTONIZADOR FM ATIVADO!");
   };
 
-  return (
-    <div className="w-full rounded-2xl border-3 border-zinc-900 bg-gradient-to-b from-[#ffcc00] to-[#e6b800] p-3 shadow-[0_5px_0_#18181b,0_10px_20px_rgba(0,0,0,0.5)] text-zinc-900 select-none relative overflow-hidden transition-all duration-300">
+  // 0. Versão Miniatura Flutuante (Gadget Retrô Recolhido)
+  if (floating && !isExpanded) {
+    return (
+      <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] select-none text-zinc-950 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <button
+          type="button"
+          onClick={handleTogglePlay}
+          className="w-7 h-7 rounded-full bg-zinc-950 hover:bg-zinc-800 text-arcade-yellow flex items-center justify-center text-xs font-bold active:scale-90 transition-transform shadow cursor-pointer"
+          title={isPlaying ? "Pausar som" : "Tocar som"}
+        >
+          {isPlaying ? "⏸" : "▶"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => toggleExpanded(true)}
+          className="flex items-center gap-2 pl-0.5 pr-1 text-left cursor-pointer group"
+          title="Clique para abrir o Walkman Esportivo Completo"
+        >
+          <div className="flex flex-col">
+            <span className="font-arcade text-[6.5px] font-black tracking-wider text-zinc-900 leading-none">
+              SPORTS 90
+            </span>
+            <span className="font-arcade text-[8.5px] font-bold text-[#172554] leading-tight truncate max-w-[105px]">
+              {isTapeMode ? station.title : `${station.freq} MHz`}
+            </span>
+          </div>
+
+          {isPlaying && (
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-600 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+            </span>
+          )}
+
+          <div className="w-5 h-5 rounded-full bg-zinc-900/15 group-hover:bg-zinc-900/30 flex items-center justify-center text-[9px] text-zinc-900 font-bold transition-colors">
+            ▲
+          </div>
+        </button>
+      </div>
+    );
+  }
+
+  const walkmanContent = (
+    <div className={`w-full rounded-2xl border-3 border-zinc-900 bg-gradient-to-b from-[#ffcc00] to-[#e6b800] p-3 shadow-[0_5px_0_#18181b,0_10px_20px_rgba(0,0,0,0.5)] text-zinc-900 select-none relative overflow-hidden transition-all duration-300 ${floating ? "shadow-[0_15px_40px_rgba(0,0,0,0.85),0_5px_0_#18181b]" : ""}`}>
       {/* Detalhe de textura esportiva: Friso lateral azul escuro */}
       <div className="absolute top-0 right-0 bottom-0 w-2.5 bg-[#172554] border-l-2 border-zinc-900 pointer-events-none" />
 
-      {/* 1. TOPO: Plug P2 + Logo ALL WEATHER SPORTS + Chave Seletora FM/K7 */}
+      {/* 1. TOPO: Plug P2 + Logo ALL WEATHER SPORTS + Chave Seletora FM/K7 + Botão Minimizar */}
       <div className="flex items-center justify-between mb-2 pr-2">
         {/* Plug P2 de Fone com fio retrô */}
         <div className="flex items-center gap-1.5" title="Conector de fone 3.5mm">
@@ -116,16 +194,29 @@ export function RetroBoombox() {
           </div>
         </div>
 
-        {/* Chave Seletora Mecânica: FM ↔ K7 */}
-        <button
-          type="button"
-          onClick={isTapeMode ? handleSwitchToFm : handleInsertTape}
-          className="flex items-center gap-1 bg-zinc-900 hover:bg-zinc-800 text-arcade-yellow text-[8px] font-arcade px-2 py-1 rounded-md border border-zinc-700 shadow active:scale-95 transition-all cursor-pointer"
-          title={isTapeMode ? "Alternar para Rádio FM" : "Alternar para Mixtape Fita K7"}
-        >
-          <span>{isTapeMode ? "📼" : "📻"}</span>
-          <span className="font-bold">{isTapeMode ? "K7" : "FM"}</span>
-        </button>
+        {/* Chave Seletora Mecânica: FM ↔ K7 + Botão Minimizar */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={isTapeMode ? handleSwitchToFm : handleInsertTape}
+            className="flex items-center gap-1 bg-zinc-900 hover:bg-zinc-800 text-arcade-yellow text-[8px] font-arcade px-2 py-1 rounded-md border border-zinc-700 shadow active:scale-95 transition-all cursor-pointer"
+            title={isTapeMode ? "Alternar para Rádio FM" : "Alternar para Mixtape Fita K7"}
+          >
+            <span>{isTapeMode ? "📼" : "📻"}</span>
+            <span className="font-bold">{isTapeMode ? "K7" : "FM"}</span>
+          </button>
+
+          {floating && (
+            <button
+              type="button"
+              onClick={() => toggleExpanded(false)}
+              className="w-6 h-6 rounded-md bg-zinc-900/20 hover:bg-zinc-900/40 text-zinc-900 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+              title="Minimizar Walkman"
+            >
+              —
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Feedback Toast flutuante rápido */}
@@ -249,4 +340,14 @@ export function RetroBoombox() {
       </div>
     </div>
   );
+
+  if (floating) {
+    return (
+      <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 w-72 sm:w-80 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_5px_0_#18181b] rounded-2xl animate-in zoom-in-95 duration-200">
+        {walkmanContent}
+      </div>
+    );
+  }
+
+  return walkmanContent;
 }

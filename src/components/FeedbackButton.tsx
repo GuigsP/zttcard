@@ -6,7 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 const LS_KEY = "ztt.feedback.lastSentAt";
 const COOLDOWN_MS = 30_000;
 
-export function FeedbackButton() {
+interface FeedbackButtonProps {
+  inline?: boolean;
+}
+
+export function FeedbackButton({ inline = false }: FeedbackButtonProps = {}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState<"up" | "down" | null>(null);
@@ -16,6 +20,9 @@ export function FeedbackButton() {
 
   // Hide on admin/auth pages.
   if (pathname.startsWith("/admin") || pathname.startsWith("/auth")) return null;
+
+  // Se não for inline e estiver na tela inicial (StartScreen), oculta a versão fixa para não duplicar com o botão do topo
+  if (!inline && pathname === "/") return null;
 
   const reset = () => {
     setRating(null);
@@ -82,10 +89,16 @@ export function FeedbackButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 font-arcade text-[10px] px-3 py-2 bg-arcade-yellow text-arcade-dark border-2 border-arcade-dark shadow-arcade hover:bg-arcade-red hover:text-arcade-cream transition-colors"
+        className={
+          inline
+            ? "h-7 sm:h-8 px-2 sm:px-2.5 flex items-center justify-center gap-1 rounded-lg border border-arcade-yellow/60 bg-arcade-blue/70 hover:bg-arcade-yellow hover:text-arcade-dark text-arcade-cream text-xs active:scale-95 transition-all cursor-pointer font-arcade"
+            : "fixed top-3.5 right-3.5 sm:right-6 z-50 font-arcade text-[9px] sm:text-[10px] px-2.5 sm:px-3 py-1.5 bg-arcade-yellow text-arcade-dark border-2 border-arcade-dark shadow-arcade hover:bg-arcade-red hover:text-arcade-cream transition-all flex items-center gap-1 cursor-pointer"
+        }
         aria-label="Enviar feedback"
+        title="Mandar Feedback / Sugestão"
       >
-        FEEDBACK 💬
+        <span>💬</span>
+        <span className="hidden sm:inline text-[9px]">FEEDBACK</span>
       </button>
 
       {open && (

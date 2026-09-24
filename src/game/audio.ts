@@ -873,6 +873,17 @@ class SoundManager {
       ctx.resume().catch(() => {});
     }
 
+    // Se já temos um elemento de áudio pausado e válido, retoma imediatamente
+    if (this.radioAudioElement && this.radioAudioElement.paused && this.radioAudioElement.readyState >= 2) {
+      this.radioAudioElement.volume = this.muted ? 0 : this.volume * 0.4;
+      this.radioAudioElement.muted = this.muted;
+      this.radioAudioElement.play().catch(() => {
+        this.startCurrentStation();
+      });
+      this.notifyRadioListeners();
+      return;
+    }
+
     // Retoma no ponto exato do relógio virtual contínuo da estação atual
     this.startCurrentStation();
     this.notifyRadioListeners();
@@ -882,6 +893,8 @@ class SoundManager {
     this.syncCurrentStationTimeline();
     this.saveStationTimelines();
     this.radioPlaying = false;
+    this.playSessionId++; // Invalida callbacks de reprodução assíncronos anteriores
+
     if (this.radioAudioElement) {
       try {
         this.radioAudioElement.pause();
@@ -1081,7 +1094,6 @@ class SoundManager {
   ) {
     const sessionId = this.playSessionId;
     if (!this.radioPlaying) {
-      onFail();
       return;
     }
 
@@ -1135,7 +1147,7 @@ class SoundManager {
     };
 
     audio.onerror = () => {
-      if (sessionId === this.playSessionId) {
+      if (sessionId === this.playSessionId && this.radioPlaying) {
         onFail();
       }
     };
@@ -1153,7 +1165,8 @@ class SoundManager {
         }
       })
       .catch(() => {
-        if (sessionId === this.playSessionId) {
+        // Se a reprodução falhou porque o rádio foi pausado, não dispara fallback
+        if (sessionId === this.playSessionId && this.radioPlaying) {
           onFail();
         }
       });
@@ -1161,7 +1174,11 @@ class SoundManager {
 
   // Procedural 16-bit retro music generator
   private startProceduralBGM(pattern: string) {
-    if (this.proceduralInterval) clearInterval(this.proceduralInterval);
+    if (!this.radioPlaying) return;
+    if (this.proceduralInterval) {
+      clearInterval(this.proceduralInterval);
+      this.proceduralInterval = null;
+    }
     this.proceduralStep = 0;
 
     const ctx = this.getContext();
