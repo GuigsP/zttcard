@@ -43,31 +43,65 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const handleClearCacheAndReload = () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
+    window.location.href = "/";
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground font-sans">
+      <div className="max-w-lg w-full text-center p-6 bg-card border border-border rounded-xl shadow-lg">
+        <div className="text-4xl mb-3">⚠️</div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">
+          Ops! Não foi possível carregar a página
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Ocorreu um erro inesperado na renderização do aplicativo. Você pode tentar recarregar ou limpar o cache local se o problema persistir.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+
+        {error?.message && (
+          <div className="mt-4 text-left">
+            <details className="bg-muted/60 border border-border rounded p-2 text-xs font-mono text-muted-foreground overflow-auto max-h-48 cursor-pointer">
+              <summary className="font-semibold text-foreground select-none cursor-pointer">
+                Detalhes do erro técnico: {error.message}
+              </summary>
+              <pre className="mt-2 whitespace-pre-wrap text-[11px] leading-relaxed">
+                {error.stack || error.message}
+              </pre>
+            </details>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap justify-center gap-2.5">
           <button
             onClick={() => {
               router.invalidate();
               reset();
+              window.location.reload();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm cursor-pointer"
           >
-            Try again
+            Tentar novamente
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent cursor-pointer"
           >
-            Go home
+            Ir para o início
           </a>
+          <button
+            type="button"
+            onClick={handleClearCacheAndReload}
+            className="inline-flex items-center justify-center rounded-md bg-amber-600/90 text-white px-4 py-2 text-sm font-medium transition-colors hover:bg-amber-600 shadow-sm cursor-pointer"
+            title="Limpa cartinhas em cache corrompidas e reinicia o jogo do zero"
+          >
+            🧹 Limpar Cache e Reiniciar
+          </button>
         </div>
       </div>
     </div>

@@ -91,14 +91,14 @@ export function StartScreen({
 
   const wallet = getPlayerWallet();
   const playerLevel = getPlayerLevel();
-  const inventory = getPlayerInventory();
-  const catalog = getMasterCatalog();
-  const duplicates = getDuplicatesList();
+  const inventory = getPlayerInventory() || {};
+  const catalog = getMasterCatalog() || [];
+  const duplicates = getDuplicatesList() || [];
   const dailyStatus = canClaimDailyFree();
 
-  const totalCards = catalog.length;
-  const collectedCards = catalog.filter((c) => (inventory[c.id] ?? 0) >= 1).length;
-  const progressPercent = Math.round((collectedCards / totalCards) * 100);
+  const totalCards = catalog.length || 1;
+  const collectedCards = catalog.filter((c) => c && (inventory[c.id] ?? 0) >= 1).length;
+  const progressPercent = Math.min(100, Math.max(0, Math.round((collectedCards / totalCards) * 100)));
 
   const selectSection = (sec: MenuSection) => {
     sound.playAttrSelect();
@@ -144,7 +144,7 @@ export function StartScreen({
 
         {/* Ações Rápidas: Online Badge + Tutorial */}
         <div className="flex items-center gap-1.5">
-          <OnlineBadge />
+          <OnlineBadge compact />
           <button
             type="button"
             onClick={() => selectSection("tutorial")}

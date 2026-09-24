@@ -743,10 +743,12 @@ export function getCachedCards(): DBCard[] {
       }
     }
   }
-  return cards.map((c) => ({
-    ...c,
-    name: (c.name || "").toUpperCase(),
-  }));
+  return (cards || [])
+    .filter((c): c is DBCard => Boolean(c && typeof c === "object"))
+    .map((c) => ({
+      ...c,
+      name: (c.name || "").toUpperCase(),
+    }));
 }
 
 export function checkIsCardExclusive(cardId: string): boolean {

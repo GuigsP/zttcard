@@ -71,7 +71,7 @@ export function CardView({
               className="inline-flex items-center justify-center flex-shrink-0"
               title="Escudo do Clube"
             >
-              {card.clubBadgeUrl.startsWith("http") || card.clubBadgeUrl.startsWith("/") ? (
+              {typeof card.clubBadgeUrl === "string" && (card.clubBadgeUrl.startsWith("http") || card.clubBadgeUrl.startsWith("/")) ? (
                 <img
                   src={card.clubBadgeUrl}
                   alt="Escudo"
@@ -79,11 +79,11 @@ export function CardView({
                   loading="lazy"
                 />
               ) : (
-                <span className={small ? "text-xs" : "text-sm"}>{card.clubBadgeUrl}</span>
+                <span className={small ? "text-xs" : "text-sm"}>{String(card.clubBadgeUrl || "")}</span>
               )}
             </span>
           )}
-          <span>{small ? POSITION_SHORT[card.position] : POSITION_LABELS[card.position]}</span>
+          <span>{small ? (POSITION_SHORT[card.position] ?? card.position ?? "JOG") : (POSITION_LABELS[card.position] ?? card.position ?? "JOGADOR")}</span>
         </div>
         <div className={`flex items-center flex-shrink-0 ${small ? "gap-1" : "gap-1.5"}`}>
           {theme.badge && (
@@ -142,9 +142,9 @@ export function CardView({
                 fontSize: small ? 11 : 14,
                 lineHeight: 1.1,
               }}
-              title={card.name}
+              title={card.name || ""}
             >
-              {card.name.toUpperCase()}
+              {(card.name || "").toUpperCase()}
             </div>
           </div>
         </div>
@@ -156,7 +156,7 @@ export function CardView({
               preserveAspectRatio="xMidYMid meet"
               className="w-full"
               style={{ height: 28 }}
-              aria-label={card.name}
+              aria-label={card.name || ""}
             >
               <text
                 x="50"
@@ -172,7 +172,7 @@ export function CardView({
                   letterSpacing: "0.05em",
                 }}
               >
-                {card.name.toUpperCase()}
+                {(card.name || "").toUpperCase()}
               </text>
             </svg>
           ) : (
@@ -180,7 +180,7 @@ export function CardView({
               className="uppercase tracking-wider break-words hyphens-auto w-full text-xl leading-tight"
               style={{ fontFamily: theme.nameFont }}
             >
-              {card.name.toUpperCase()}
+              {(card.name || "").toUpperCase()}
             </div>
           )}
         </div>
@@ -188,8 +188,8 @@ export function CardView({
 
       {/* 5. ATRIBUTOS TÁTICOS */}
       <div className="px-2 pb-2 space-y-1 relative z-10">
-        {attrsForPosition(card.position).map((k) => {
-          const v = card.attrs[k] ?? 0;
+        {(attrsForPosition(card.position || "ATA") || []).map((k) => {
+          const v = card.attrs?.[k] ?? 0;
           return (
             <div
               key={k}
