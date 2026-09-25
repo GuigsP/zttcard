@@ -168,6 +168,7 @@ export type PackProduct = {
 export interface RealMoneyOffer {
   id: string;
   title: string;
+  description?: string;
   fichasOuroAwarded: number;
   bonusFichasOuro: number;
   priceBRL: number;

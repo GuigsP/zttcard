@@ -49,23 +49,23 @@ export function PackShop({ onBack }: Props) {
 
     if (pack.id === "lendas_90s") {
       if (useAlternativeCurrency) {
-        // Pagamento com Contos (1.500)
+        // Pagamento com Conto (1.500)
         if (wallet.contos < 1500) {
           sound.playPointLost();
-          setErrorMessage("Contos insuficientes! São necessários 1.500 Contos para a Caixa Lendas 90s.");
+          setErrorMessage("Conto insuficiente! São necessários 1.500 Conto para a Caixa Lendas 90s.");
           return;
         }
       } else {
         // Pagamento com Fichas de Ouro (120)
         if (wallet.fichasOuro < 120) {
           sound.playPointLost();
-          setErrorMessage("Fichas de Ouro insuficientes! Adquira na banca ou use 1.500 Contos.");
+          setErrorMessage("Fichas de Ouro insuficientes! Adquira na banca ou use 1.500 Conto.");
           return;
         }
       }
     } else if (!pack.isDailyFree && wallet.contos < pack.priceCoins) {
       sound.playPointLost();
-      setErrorMessage("Contos insuficientes! Jogue partidas ou venda repetidas para acumular.");
+      setErrorMessage("Conto insuficiente! Jogue partidas ou venda repetidas para acumular.");
       return;
     }
 
@@ -131,7 +131,7 @@ export function PackShop({ onBack }: Props) {
                 {wallet.contos.toLocaleString()}
               </span>
               <span className="font-arcade text-[8px] text-arcade-cream/70">
-                CONTOS
+                CONTO
               </span>
             </div>
           </div>
@@ -251,7 +251,7 @@ export function PackShop({ onBack }: Props) {
                           : "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
                       }`}
                     >
-                      🪙 1.500 CONTOS
+                      🪙 1.500 CONTO
                     </button>
                   </div>
                 ) : (
@@ -279,7 +279,7 @@ export function PackShop({ onBack }: Props) {
           💡 COMO FUNCIONA A COLEÇÃO E O JORNALEIRO?
         </div>
         <p className="font-body text-xs text-arcade-cream/80 max-w-2xl mx-auto">
-          A primeira cópia de qualquer figurinha vai direto e colada no seu <b>Álbum Virtual</b>. As repetidas vão para o seu <b>Montinho</b>, onde você pode reciclá-las por <b>Contos</b> (Comum = 6, Incomum = 20, Rara = 70, Lenda = 250) ou trocá-las com amigos na <b>Pracinha</b>!
+          A primeira cópia de qualquer figurinha vai direto e colada no seu <b>Álbum Virtual</b>. As repetidas vão para o seu <b>Montinho</b>, onde você pode reciclá-las por <b>Conto</b> (Comum = 6, Incomum = 20, Rara = 70, Lenda = 250) ou trocá-las com amigos na <b>Pracinha</b>!
         </p>
       </div>
     </div>

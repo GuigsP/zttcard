@@ -111,115 +111,171 @@ export function StartScreen({
 
   return (
     <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col relative selection:bg-arcade-yellow selection:text-arcade-dark">
-      {/* 0. TOP STATUS BAR UNIFICADO (Mobile & Desktop) */}
-      <header className="sticky top-0 z-40 bg-arcade-dark/95 backdrop-blur-md border-b-2 md:border-b-3 border-arcade-yellow px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-lg">
-        {/* Esquerda: Logo do Jogo */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => selectSection("jogar")}
-            className="text-left group cursor-pointer active:scale-95 transition-transform"
-            title="Ir para o início"
-          >
-            <h1 className="font-arcade text-lg sm:text-xl md:text-2xl text-arcade-yellow drop-shadow-[2px_2px_0_var(--arcade-dark)] tracking-wider leading-none">
-              ZERO TO TOP
-            </h1>
-            <div className="font-display text-[9px] sm:text-xs text-arcade-cream/80 tracking-widest mt-0.5">
-              CARD · DUELO RETRÔ
-            </div>
-          </button>
-        </div>
+      {/* 0. TOP HUD (Desktop: 3 zonas | Mobile: logo + moedas) */}
+      <header className="sticky top-0 z-40 bg-arcade-dark/95 backdrop-blur-md border-b-2 border-arcade-yellow shadow-lg">
+        <div className="px-3 sm:px-5 py-2 flex items-center justify-between gap-2">
 
-        {/* Direita: Perfil do Jogador & Recursos (Nível, ZTT$, Online, Ajuda, Admin) */}
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          {/* Nível & Progresso XP (Clicável -> abre Carteira / Perfil) */}
-          <button
-            type="button"
-            onClick={() => selectSection("carteira")}
-            className="flex items-center gap-1.5 sm:gap-2 bg-arcade-blue/70 hover:bg-arcade-blue border border-arcade-yellow/60 hover:border-arcade-yellow rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 active:scale-95 transition-all cursor-pointer shadow-sm"
-            title="Ver Perfil e Carteira"
-          >
-            <span className="text-xs sm:text-sm">⭐</span>
-            <div className="flex flex-col items-start">
-              <div className="flex items-center gap-1 leading-none">
-                <span className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow font-bold">
-                  NV. {playerLevel.level}
-                </span>
-                <span className="hidden sm:inline font-arcade text-[7.5px] text-arcade-cream/70">
-                  ({playerLevel.xp} XP)
-                </span>
+          {/* ── ZONA 1: ESQUERDA — Logo + Nível/XP integrados ── */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Logo clicável */}
+            <button
+              type="button"
+              onClick={() => selectSection("jogar")}
+              className="text-left cursor-pointer active:scale-95 transition-transform"
+              title="Ir para o início"
+            >
+              <h1 className="font-arcade text-base sm:text-lg md:text-xl text-arcade-yellow drop-shadow-[2px_2px_0_var(--arcade-dark)] tracking-wider leading-none">
+                ZERO TO TOP
+              </h1>
+              <div className="font-display text-[8px] sm:text-[9px] text-arcade-cream/70 tracking-widest mt-0.5">
+                CARD · DUELO RETRÔ
               </div>
-              <div className="w-12 sm:w-20 bg-black/60 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 border border-arcade-yellow/30">
-                <div
-                  className="bg-gradient-to-r from-arcade-yellow to-amber-500 h-full transition-all duration-300"
-                  style={{ width: `${playerLevel.progressPercent}%` }}
-                />
+            </button>
+
+            {/* Bloco Nível + XP bar (visível a partir de sm) */}
+            <button
+              type="button"
+              onClick={() => selectSection("carteira")}
+              className="hidden sm:flex items-center gap-1.5 bg-arcade-blue/50 hover:bg-arcade-blue/80 border border-arcade-yellow/40 hover:border-arcade-yellow rounded-lg px-2.5 py-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Ver Perfil e Carteira"
+            >
+              <span className="text-sm">⭐</span>
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="font-arcade text-[10px] text-arcade-yellow font-bold">NV. {playerLevel.level}</span>
+                  <span className="hidden lg:inline font-arcade text-[8px] text-arcade-cream/60">
+                    {playerLevel.xp} XP
+                  </span>
+                </div>
+                <div className="w-16 lg:w-24 bg-black/60 h-1.5 rounded-full overflow-hidden mt-1 border border-arcade-yellow/30">
+                  <div
+                    className="bg-gradient-to-r from-yellow-400 via-amber-400 to-amber-500 h-full transition-all duration-500 shadow-[0_0_6px_rgba(255,200,0,0.6)]"
+                    style={{ width: `${playerLevel.progressPercent}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          </button>
-
-          {/* Saldo de Moedas (Clicável -> abre Carteira) */}
-          <button
-            type="button"
-            onClick={() => selectSection("carteira")}
-            className="flex items-center gap-1.5 sm:gap-2 bg-arcade-blue/70 hover:bg-arcade-blue border border-arcade-yellow/60 hover:border-arcade-yellow rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
-            title="Sua Carteira: Contos e Fichas de Ouro"
-          >
-            <div className="flex items-center gap-1">
-              <span className="text-xs sm:text-sm animate-bounce">🪙</span>
-              <span className="font-arcade text-[9px] sm:text-xs text-arcade-yellow font-bold leading-none">
-                {wallet.contos.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 pl-1 border-l border-arcade-yellow/40">
-              <span className="text-xs sm:text-sm">🟡</span>
-              <span className="font-arcade text-[9px] sm:text-xs text-yellow-300 font-bold leading-none">
-                {wallet.fichasOuro.toLocaleString()}
-              </span>
-            </div>
-          </button>
-
-          {/* Online Status Badge */}
-          <div className="flex items-center">
-            <OnlineBadge compact />
+            </button>
           </div>
 
-          {/* Painel Admin (se admin logado) */}
-          {isAdminUser && (
-            <Link
-              to="/admin"
-              className="font-arcade text-[9px] bg-arcade-red/90 hover:bg-arcade-red text-white border border-arcade-yellow/60 rounded-lg px-2 py-1 flex items-center gap-1 transition-colors shadow"
-              title="Painel Administrativo"
+          {/* ── ZONA 2: CENTRO — 4 Abas Arcade (Desktop only, sem CARTEIRA) ── */}
+          <nav className="hidden md:flex items-center gap-1 bg-black/30 p-1 rounded-xl border border-arcade-yellow/20 shadow-inner flex-1 justify-center mx-2 lg:mx-4">
+            <DesktopNavTab
+              active={activeSection === "jogar"}
+              icon="⚽"
+              label="JOGAR"
+              isHero
+              onClick={() => selectSection("jogar")}
+            />
+            <DesktopNavTab
+              active={activeSection === "album"}
+              icon="📖"
+              label="ÁLBUM"
+              badge={`${progressPercent}%`}
+              badgeColor="bg-arcade-blue text-arcade-yellow border border-arcade-yellow/40"
+              onClick={() => selectSection("album")}
+            />
+            <DesktopNavTab
+              active={activeSection === "banca"}
+              icon="📰"
+              label="BANCA"
+              badge={dailyStatus.canClaim ? "GRÁTIS!" : undefined}
+              badgeColor="bg-arcade-green text-white animate-pulse"
+              onClick={() => selectSection("banca")}
+            />
+            <DesktopNavTab
+              active={activeSection === "pracinha"}
+              icon="🌳"
+              label="PRACINHA"
+              badge={duplicates.length > 0 ? `${duplicates.length}x` : undefined}
+              badgeColor="bg-amber-500 text-arcade-dark font-bold"
+              onClick={() => selectSection("pracinha")}
+            />
+          </nav>
+
+          {/* ── ZONA 3: DIREITA — Economia + Utilitários Discretos ── */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+
+            {/* Contos (Moeda Free) — caixa metálica âmbar */}
+            <button
+              type="button"
+              onClick={() => selectSection("carteira")}
+              title="Seus Contos (moeda ganha jogando) — clique para ver carteira"
+              className="flex items-center gap-1 bg-arcade-dark/80 hover:bg-arcade-blue/60 border border-amber-800/50 hover:border-arcade-yellow rounded-lg px-2 py-1.5 transition-colors cursor-pointer active:scale-95"
             >
-              <span>⚙️</span>
-              <span className="hidden sm:inline">ADMIN</span>
-            </Link>
-          )}
+              <span className="text-sm">🪙</span>
+              <span className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold">
+                {wallet.contos.toLocaleString()}
+              </span>
+            </button>
 
-          {/* Como Jogar / Ajuda */}
-          <button
-            type="button"
-            onClick={() => selectSection("tutorial")}
-            title="Como Jogar"
-            aria-label="Como Jogar"
-            className={`h-7 sm:h-8 px-2 sm:px-2.5 flex items-center justify-center gap-1 rounded-lg border text-xs active:scale-95 transition-all cursor-pointer ${
-              activeSection === "tutorial"
-                ? "bg-arcade-yellow text-arcade-dark border-arcade-cream font-bold"
-                : "bg-arcade-blue/70 border-arcade-yellow/60 text-arcade-cream hover:bg-arcade-yellow hover:text-arcade-dark"
-            }`}
-          >
-            <span>❓</span>
-            <span className="hidden sm:inline font-arcade text-[9px]">AJUDA</span>
-          </button>
+            {/* Fichas de Ouro + botão [+] verde de recarga rápida */}
+            <div className="flex items-center gap-0 bg-[#1a1100]/90 border border-yellow-500/50 rounded-lg overflow-hidden shadow-[0_0_8px_rgba(234,179,8,0.15)]">
+              <button
+                type="button"
+                onClick={() => selectSection("carteira")}
+                title="Fichas de Ouro — clique para ver extrato"
+                className="flex items-center gap-1 px-2 py-1.5 hover:bg-yellow-900/30 transition-colors cursor-pointer active:scale-95"
+              >
+                <span className="text-sm">🟡</span>
+                <span className="font-arcade text-[10px] sm:text-xs text-amber-300 font-bold">
+                  {wallet.fichasOuro.toLocaleString()}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => selectSection("carteira")}
+                title="Recarregar Fichas de Ouro"
+                className="flex items-center justify-center w-6 h-full bg-green-500 hover:bg-green-400 text-black font-black text-sm px-1 transition-colors cursor-pointer active:scale-95 border-l border-yellow-500/40 self-stretch"
+              >
+                +
+              </button>
+            </div>
 
-          {/* Feedback */}
-          <FeedbackButton inline />
+            {/* Separador */}
+            <div className="hidden sm:block w-px h-5 bg-arcade-yellow/20" />
+
+            {/* Online badge discreto */}
+            <div className="hidden sm:flex items-center">
+              <OnlineBadge compact />
+            </div>
+
+            {/* Admin */}
+            {isAdminUser && (
+              <Link
+                to="/admin"
+                className="font-arcade text-[8px] bg-arcade-red/90 hover:bg-arcade-red text-white border border-arcade-yellow/50 rounded px-1.5 py-1 flex items-center gap-1 transition-colors shadow"
+                title="Painel Administrativo"
+              >
+                <span>⚙️</span>
+                <span className="hidden lg:inline">ADMIN</span>
+              </Link>
+            )}
+
+            {/* Ajuda — ícone quadrado estilo arcade */}
+            <button
+              type="button"
+              onClick={() => selectSection("tutorial")}
+              title="Como Jogar"
+              aria-label="Como Jogar"
+              className={`w-7 h-7 flex items-center justify-center rounded border font-bold text-sm active:scale-95 transition-all cursor-pointer ${
+                activeSection === "tutorial"
+                  ? "bg-arcade-yellow text-arcade-dark border-arcade-cream"
+                  : "bg-arcade-blue/50 border-arcade-yellow/40 text-arcade-cream hover:bg-arcade-yellow hover:text-arcade-dark"
+              }`}
+            >
+              ?
+            </button>
+
+            {/* Feedback */}
+            <FeedbackButton inline />
+          </div>
+
         </div>
       </header>
 
       {/* 1. PAINEL CENTRAL DINÂMICO (CENTER STAGE) */}
-      <main className="flex-1 flex flex-col justify-start items-center p-3 sm:p-6 md:p-8 relative overflow-y-auto pb-28 md:pb-32">
-        <div className="w-full max-w-4xl flex flex-col items-center">
+      <main className="flex-1 flex flex-col justify-start items-center p-3 sm:p-6 md:p-8 relative overflow-y-auto pb-48">
+        <div className="w-full max-w-[94vw] 2xl:max-w-7xl flex flex-col items-center">
           {/* SEÇÃO 1: JOGAR */}
           {activeSection === "jogar" && (
             <div className="w-full flex flex-col items-center animate-in fade-in duration-200">
@@ -544,25 +600,25 @@ export function StartScreen({
 
           {/* SEÇÃO 5: MINHA CARTEIRA & BANCA DE FICHAS */}
           {activeSection === "carteira" && (
-            <div className="w-full max-w-2xl bg-arcade-dark border-4 border-arcade-yellow p-6 shadow-arcade flex flex-col items-center text-center gap-5 animate-in fade-in duration-200">
+            <div className="w-full bg-arcade-dark border-4 border-arcade-yellow p-5 sm:p-8 md:p-10 shadow-arcade flex flex-col items-center text-center gap-6 animate-in fade-in duration-200">
               <div>
-                <h2 className="font-arcade text-lg sm:text-xl text-arcade-yellow mb-1 flex items-center justify-center gap-2">
+                <h2 className="font-arcade text-lg sm:text-2xl text-arcade-yellow mb-1 flex items-center justify-center gap-2">
                   <span>💼</span>
                   <span>MINHA CARTEIRA</span>
                 </h2>
-                <p className="font-body text-xs text-arcade-cream/80">
-                  Gerencie seus Contos conquistados nos gramados e suas Fichas de Ouro da banca!
+                <p className="font-body text-xs sm:text-sm text-arcade-cream/80">
+                  Gerencie seu Conto conquistado nos gramados e suas Fichas de Ouro da banca!
                 </p>
               </div>
 
               {/* Cards de Saldo Duplo */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                {/* Contos */}
+                {/* Conto */}
                 <div className="bg-arcade-blue/80 border-2 border-arcade-yellow p-4 shadow-arcade flex items-center gap-3 text-left">
                   <span className="text-3xl animate-bounce">🪙</span>
                   <div>
                     <span className="font-arcade text-[9px] text-arcade-yellow/80">
-                      CONTOS (FARMÁVEL)
+                      CONTO (FARMÁVEL)
                     </span>
                     <div className="font-arcade text-xl sm:text-2xl text-arcade-yellow font-bold leading-tight">
                       {wallet.contos.toLocaleString()}
@@ -634,11 +690,11 @@ export function StartScreen({
 
               {/* Loja de Fichas de Ouro (Tabela R$) */}
               <div className="w-full text-left mt-2">
-                <h3 className="font-arcade text-xs text-arcade-yellow mb-2 flex items-center gap-1.5">
+                <h3 className="font-arcade text-xs text-arcade-yellow mb-2.5 flex items-center gap-1.5">
                   <span>🏪</span>
                   <span>BANCA DE FICHAS DE OURO (TABELA OFICIAL)</span>
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                   {REAL_MONEY_STORE.map((offer) => (
                     <div
                       key={offer.id}
@@ -657,7 +713,12 @@ export function StartScreen({
                         <div className="font-arcade text-xs text-arcade-yellow font-bold">
                           {offer.title}
                         </div>
-                        <div className="font-arcade text-base text-yellow-300 font-bold mt-1">
+                        {offer.description && (
+                          <div className="font-body text-[10px] text-arcade-cream/70 leading-tight mt-0.5 line-clamp-2">
+                            {offer.description}
+                          </div>
+                        )}
+                        <div className="font-arcade text-base text-yellow-300 font-bold mt-1.5">
                           🟡 {offer.fichasOuroAwarded}{" "}
                           {offer.bonusFichasOuro > 0 && (
                             <span className="text-[10px] text-green-400 font-normal">
@@ -684,13 +745,13 @@ export function StartScreen({
                 <b className="text-arcade-yellow font-arcade text-[10px]">💡 REGRAS DA ECONOMIA:</b>
                 <ul className="list-disc list-inside mt-1 space-y-1">
                   <li>
-                    <b>Recompensas Solo:</b> Vitória: +{MATCH_REWARDS.solo.win} Contos · Empate: +{MATCH_REWARDS.solo.draw} Contos · Derrota: +{MATCH_REWARDS.solo.loss} Contos.
+                    <b>Recompensas Solo:</b> Vitória: +{MATCH_REWARDS.solo.win} Conto · Empate: +{MATCH_REWARDS.solo.draw} Conto · Derrota: +{MATCH_REWARDS.solo.loss} Conto.
                   </li>
                   <li>
-                    <b>Recompensas Multiplayer:</b> Vitória: +{MATCH_REWARDS.multiplayer.win} Contos · Empate: +{MATCH_REWARDS.multiplayer.draw} Contos · Derrota: +{MATCH_REWARDS.multiplayer.loss} Contos.
+                    <b>Recompensas Multiplayer:</b> Vitória: +{MATCH_REWARDS.multiplayer.win} Conto · Empate: +{MATCH_REWARDS.multiplayer.draw} Conto · Derrota: +{MATCH_REWARDS.multiplayer.loss} Conto.
                   </li>
                   <li>
-                    <b>Reciclagem Anti-inflacionária:</b> Comum = 6 Contos · Incomum = 20 Contos · Rara = 70 Contos · Lenda = 250 Contos.
+                    <b>Reciclagem Anti-inflacionária:</b> Comum = 6 Conto · Incomum = 20 Conto · Rara = 70 Conto · Lenda = 250 Conto.
                   </li>
                   <li>
                     <b>Pacote Diário:</b> 3 cartas gratuitas a cada 24 horas na Banca de Jornal!
@@ -736,9 +797,9 @@ export function StartScreen({
         </div>
       </main>
 
-      {/* 2. BOTTOM NAVIGATION UNIFICADO (Dock no Desktop / Barra Fixa no Mobile) */}
-      <div className="fixed bottom-0 md:bottom-5 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 flex justify-center pointer-events-none">
-        <nav className="pointer-events-auto w-full md:w-auto md:min-w-[540px] bg-arcade-dark/95 backdrop-blur-md border-t-3 md:border-3 border-arcade-yellow md:rounded-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.6)] md:shadow-[0_8px_30px_rgba(0,0,0,0.85),0_0_20px_rgba(255,204,0,0.2)] px-2 sm:px-6 py-1.5 flex items-end justify-around md:justify-center md:gap-6 pb-[max(0.4rem,env(safe-area-inset-bottom))] md:pb-1.5">
+      {/* 2. BOTTOM NAVIGATION (Aparece SOMENTE no Mobile) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none md:hidden">
+        <nav className="pointer-events-auto w-full bg-arcade-dark/95 backdrop-blur-md border-t-3 border-arcade-yellow px-2 sm:px-6 py-1.5 flex items-end justify-around pb-[max(0.4rem,env(safe-area-inset-bottom))]">
           {/* Tab 1: Banca */}
           <MobileNavTab
             active={activeSection === "banca"}
@@ -759,7 +820,7 @@ export function StartScreen({
             onClick={() => selectSection("album")}
           />
 
-          {/* Tab 3: JOGAR (HERO BUTTON - Estilo Espadas / Centralizado) */}
+          {/* Tab 3: JOGAR (HERO BUTTON - Centralizado) */}
           <button
             type="button"
             onClick={() => selectSection("jogar")}
@@ -768,7 +829,7 @@ export function StartScreen({
             }`}
           >
             <div
-              className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-2xl md:text-3xl border-3 shadow-arcade transition-all ${
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border-3 shadow-arcade transition-all ${
                 activeSection === "jogar"
                   ? "bg-gradient-to-b from-arcade-yellow to-amber-500 border-arcade-cream text-arcade-dark shadow-[0_0_20px_rgba(255,204,0,0.8)]"
                   : "bg-gradient-to-b from-arcade-blue to-slate-900 border-arcade-yellow text-arcade-yellow hover:border-arcade-cream"
@@ -779,7 +840,7 @@ export function StartScreen({
               </span>
             </div>
             <span
-              className={`font-arcade text-[8.5px] md:text-[9.5px] mt-1 tracking-wider ${
+              className={`font-arcade text-[8.5px] mt-1 tracking-wider ${
                 activeSection === "jogar"
                   ? "text-arcade-yellow font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                   : "text-arcade-cream/70"
@@ -812,6 +873,50 @@ export function StartScreen({
       {/* 3. RADINHO RETRÔ FLUTUANTE (Walkman Esportivo Amarelo Anos 90 - Canto Inferior Direito) */}
       <RetroBoombox floating />
     </div>
+  );
+}
+
+function DesktopNavTab({
+  active,
+  icon,
+  label,
+  badge,
+  badgeColor = "bg-arcade-yellow text-arcade-dark",
+  isHero = false,
+  onClick,
+}: {
+  active: boolean;
+  icon: string;
+  label: string;
+  badge?: string;
+  badgeColor?: string;
+  isHero?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative px-3 py-1.5 rounded-lg font-arcade text-xs flex items-center gap-1.5 border-2 transition-all cursor-pointer active:scale-95 ${
+        isHero
+          ? active
+            ? "bg-gradient-to-r from-arcade-yellow to-amber-500 text-arcade-dark border-arcade-cream font-bold shadow-[0_0_12px_rgba(255,204,0,0.7)]"
+            : "bg-arcade-blue/80 hover:bg-arcade-yellow hover:text-arcade-dark text-arcade-yellow border-arcade-yellow"
+          : active
+          ? "bg-arcade-yellow text-arcade-dark border-arcade-cream font-bold shadow-sm"
+          : "bg-arcade-dark/60 hover:bg-arcade-blue/80 text-arcade-cream/80 hover:text-arcade-cream border-arcade-yellow/40 hover:border-arcade-yellow"
+      }`}
+    >
+      <span className="text-sm">{icon}</span>
+      <span className="tracking-wider">{label}</span>
+      {badge && (
+        <span
+          className={`font-arcade text-[8px] px-1.5 py-0.5 rounded-full font-bold shadow ${badgeColor}`}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }
 

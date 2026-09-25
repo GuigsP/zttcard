@@ -85,6 +85,29 @@
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-4px, 3px) rotate(-1.5deg); }
+  30% { transform: translate(4px, -3px) rotate(1.5deg); }
+  45% { transform: translate(-3px, -2px) rotate(-1deg); }
+  60% { transform: translate(3px, 3px) rotate(1deg); }
+  75% { transform: translate(-2px, 1px) rotate(-0.5deg); }
+  90% { transform: translate(2px, -1px) rotate(0.5deg); }
+}
+
+.animate-screen-shake {
+  animation: screen-shake 0.5s ease-in-out;
+}
+
+@keyframes gold-spin-ray {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: gold-spin-ray 12s linear infinite;
+}
+
 @layer base {
   * { border-color: var(--color-border); }
   body {

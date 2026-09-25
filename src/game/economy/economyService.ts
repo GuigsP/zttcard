@@ -99,9 +99,71 @@ export const PACK_CATALOG: Record<PackTier, PackConfig> = {
     cardCount: 5,
     price: { currency: "fichasOuro", amount: 120 },
     altPrice: { currency: "contos", amount: 1500 },
-    odds: { COMUM: 0.15, INCOMUM: 0.45, RARA: 0.3, LENDA: 0.1 },
+    odds: { COMUM: 0.0, INCOMUM: 0.40, RARA: 0.50, LENDA: 0.10 },
     guaranteedRarity: "RARA",
     pityWeight: 8,
+  },
+};
+
+// ==========================================
+// 3.1. BLUEPRINT DETERMINÍSTICO DE SLOTS
+// ==========================================
+export interface SlotOdds {
+  COMUM: number;
+  INCOMUM: number;
+  RARA: number;
+  LENDA: number;
+}
+
+export interface PackSlotBlueprint {
+  slots: SlotOdds[];
+}
+
+export const PACK_SLOT_BLUEPRINTS: Record<PackTier, PackSlotBlueprint> = {
+  // Pacotinho Diário (3 cartas): 1 Comum, 1 Comum (85%)/Incomum (15%), 1 Clímax (95% Incomum, 4.9% Rara, 0.1% Lenda)
+  diario: {
+    slots: [
+      { COMUM: 1.0, INCOMUM: 0.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.85, INCOMUM: 0.15, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.95, RARA: 0.049, LENDA: 0.001 },
+    ],
+  },
+  // Pacotinho de Várzea (3 cartas - 100 Contos): 1 Comum, 1 Comum (70%)/Incomum (30%), 1 Clímax (85% Incomum, 14.9% Rara, 0.1% Lenda)
+  varzea: {
+    slots: [
+      { COMUM: 1.0, INCOMUM: 0.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.7, INCOMUM: 0.3, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.85, RARA: 0.149, LENDA: 0.001 },
+    ],
+  },
+  // Pacotinho Clássico (4 cartas - 250 Contos): 2 Comuns, 1 Incomum garantida, 1 Clímax (75% Incomum, 24.5% Rara, 0.5% Lenda)
+  classico: {
+    slots: [
+      { COMUM: 1.0, INCOMUM: 0.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 1.0, INCOMUM: 0.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 1.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.75, RARA: 0.245, LENDA: 0.005 },
+    ],
+  },
+  // Pacotão Ouro (5 cartas - 500 Contos): 1 Comum, 2 Incomuns, 1 Incomum (65%)/Rara (35%), 1 Clímax (98% Rara, 2% Lenda)
+  ouro: {
+    slots: [
+      { COMUM: 1.0, INCOMUM: 0.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 1.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 1.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.65, RARA: 0.35, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.0, RARA: 0.98, LENDA: 0.02 },
+    ],
+  },
+  // Caixa Lendas 90s (5 cartas - 120 Fichas / 1.500 Contos): 2 Incomuns, 2 Raras garantidas, 1 Clímax (Exatamente 10% Lenda / 90% Rara)
+  lendas_90s: {
+    slots: [
+      { COMUM: 0.0, INCOMUM: 1.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 1.0, RARA: 0.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.0, RARA: 1.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.0, RARA: 1.0, LENDA: 0.0 },
+      { COMUM: 0.0, INCOMUM: 0.0, RARA: 0.9, LENDA: 0.1 },
+    ],
   },
 };
 
@@ -112,35 +174,40 @@ export const REAL_MONEY_STORE: RealMoneyOffer[] = [
   {
     id: "pack_brl_troco_pao",
     title: "Troco do Pão",
+    description: "O trocado do bolso para o primeiro pacote.",
     fichasOuroAwarded: 50,
     bonusFichasOuro: 0,
     priceBRL: 4.9,
   },
   {
-    id: "pack_brl_saco_moedas",
-    title: "Saco de Moedas",
+    id: "pack_brl_caixinha_juiz",
+    title: "Caixinha do Juiz",
+    description: "O agrado básico para garantir o apito amigo.",
     fichasOuroAwarded: 120,
     bonusFichasOuro: 15,
     priceBRL: 9.9,
   },
   {
-    id: "pack_brl_maleta_bicheiro",
-    title: "Maleta do Bicheiro",
+    id: "pack_brl_picanha_presidente",
+    title: "Picanha do Presidente",
+    description: "O churrasco nobre de quem quer abrir pacotão.",
     fichasOuroAwarded: 350,
     bonusFichasOuro: 70,
     priceBRL: 24.9,
     isPopular: true,
   },
   {
-    id: "pack_brl_cofre_federacao",
-    title: "Cofre da Federação",
+    id: "pack_brl_maleta_bicheiro",
+    title: "Maleta do Bicheiro",
+    description: "O investimento pesado vindo direto da maleta.",
     fichasOuroAwarded: 900,
     bonusFichasOuro: 250,
     priceBRL: 59.9,
   },
   {
-    id: "pack_brl_dono_clube",
-    title: "Dono do Clube",
+    id: "pack_brl_joao_do_texto",
+    title: "João do Texto",
+    description: "Poder ilimitado de SAF de bilionário.",
     fichasOuroAwarded: 2200,
     bonusFichasOuro: 800,
     priceBRL: 129.9,
@@ -375,27 +442,42 @@ export function rollRarity(
   return selectedRarity;
 }
 
-// Sorteia carta concreta do catálogo a partir da raridade rolada
-export function drawCardByRarity(rarity: CardRarity): CatalogCard {
+// Sorteia carta concreta do catálogo a partir da raridade com proteção Anti-Clone (sem cartas idênticas no mesmo pacote)
+export function drawCardByRarity(
+  rarity: CardRarity,
+  excludeIds?: Set<string>
+): CatalogCard {
   const allCards = getMasterCatalog();
   const nonExclusive = allCards.filter((c) => !checkIsCardExclusive(c.id));
   const poolBase = nonExclusive.length > 0 ? nonExclusive : allCards;
 
-  const pool = poolBase.filter((c) => c.rarity === rarity);
-  if (pool.length > 0) {
-    return pool[Math.floor(Math.random() * pool.length)];
+  // Filtra por raridade excluindo IDs já sorteados neste pacote
+  let pool = poolBase.filter(
+    (c) => c.rarity === rarity && (!excludeIds || !excludeIds.has(c.id))
+  );
+
+  // Fallback 1: se esgotar as cartas não sorteadas dessa raridade, pega qualquer uma dessa raridade
+  if (pool.length === 0) {
+    pool = poolBase.filter((c) => c.rarity === rarity);
   }
-  return poolBase[Math.floor(Math.random() * poolBase.length)];
+
+  // Fallback 2: se a raridade estiver vazia no catálogo, pega qualquer carta não sorteada
+  if (pool.length === 0) {
+    pool = poolBase.filter((c) => !excludeIds || !excludeIds.has(c.id));
+    if (pool.length === 0) pool = poolBase;
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // ==========================================
-// 9. ABERTURA DE PACOTE (TRANSAÇÃO OFICIAL)
+// 9. ABERTURA DE PACOTE (TRANSAÇÃO OFICIAL POR SLOTS)
 // ==========================================
 export function openPackTransaction(
   wallet: Wallet,
   packTier: PackTier,
   pity: PlayerPityTracker,
-  catalogPullFn: (rarity: CardRarity) => any,
+  catalogPullFn?: (rarity: CardRarity, excludeIds?: Set<string>) => any,
   useAlternativeCurrency = false
 ): OpenPackResult {
   const pack = PACK_CATALOG[packTier];
@@ -414,19 +496,54 @@ export function openPackTransaction(
 
   const isPityTriggered =
     pity.packsSinceLastLenda >= pity.thresholdLendaGuarantee;
+
+  const blueprint = PACK_SLOT_BLUEPRINTS[packTier];
+  const cardCount = blueprint ? blueprint.slots.length : pack.cardCount;
+
   const cards: any[] = [];
+  const packCardIds = new Set<string>();
   let pulledLenda = false;
 
-  for (let i = 0; i < pack.cardCount; i++) {
-    const isGuaranteedSlot = i === pack.cardCount - 1;
-    const forceLendaOnThisSlot =
-      isPityTriggered && isGuaranteedSlot && !pulledLenda;
-    const minimumRarity = isGuaranteedSlot ? pack.guaranteedRarity : undefined;
+  for (let i = 0; i < cardCount; i++) {
+    const isClimaxSlot = i === cardCount - 1;
+    // O pity só força a Lenda se for o último slot (o clímax) e nenhuma lenda saiu ainda
+    const forceLendaOnThisSlot = isClimaxSlot && isPityTriggered && !pulledLenda;
 
-    const rarity = rollRarity(pack.odds, forceLendaOnThisSlot, minimumRarity);
-    if (rarity === "LENDA") pulledLenda = true;
+    let rarity: CardRarity;
 
-    cards.push(catalogPullFn(rarity));
+    if (forceLendaOnThisSlot) {
+      rarity = "LENDA";
+    } else if (blueprint && blueprint.slots[i]) {
+      // Rola com as odds exatas do slot configurado
+      const slotOdds = blueprint.slots[i];
+      rarity = rollRarity(slotOdds, false);
+    } else {
+      rarity = rollRarity(
+        pack.odds,
+        false,
+        isClimaxSlot ? pack.guaranteedRarity : undefined
+      );
+    }
+
+    // Regra de Ouro: Teto de no máximo 1 Lenda por pacote
+    if (rarity === "LENDA") {
+      if (pulledLenda) {
+        // Se por algum motivo já havia saído uma Lenda, rebaixa para RARA
+        rarity = "RARA";
+      } else {
+        pulledLenda = true;
+      }
+    }
+
+    // Puxa a carta concreta com garantia Anti-Clone
+    const card = catalogPullFn
+      ? catalogPullFn(rarity, packCardIds)
+      : drawCardByRarity(rarity, packCardIds);
+
+    if (card && card.id) {
+      packCardIds.add(card.id);
+    }
+    cards.push(card);
   }
 
   const updatedPity: PlayerPityTracker = {
@@ -633,7 +750,7 @@ export function openPack(
       : packConfig.price;
 
   if (!packConfig.isDailyFree && !canAfford(currentWallet, payment.currency, payment.amount)) {
-    const moedaLabel = payment.currency === "contos" ? "Contos" : "Fichas de Ouro";
+    const moedaLabel = payment.currency === "contos" ? "Conto" : "Fichas de Ouro";
     return {
       success: false,
       error: `Saldo insuficiente de ${moedaLabel}!`,
@@ -646,7 +763,7 @@ export function openPack(
       currentWallet,
       tier,
       pity,
-      (rarity) => drawCardByRarity(rarity),
+      (rarity, excludeIds) => drawCardByRarity(rarity, excludeIds),
       useAlternativeCurrency
     );
 

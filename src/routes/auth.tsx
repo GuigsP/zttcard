@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-import { isAdmin, ADMIN_EMAILS } from "@/game/cardsRepo";
+import { isAdmin } from "@/game/cardsRepo";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -17,12 +17,10 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -39,39 +37,24 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setInfo(null);
 
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      if (mode === "signup") {
-        if (!ADMIN_EMAILS.includes(cleanEmail)) {
-          throw new Error("O cadastro no Studio é restrito a e-mails autorizados pela administração.");
-        }
-        const { error } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: { emailRedirectTo: window.location.origin + "/admin" },
-        });
-        if (error) throw error;
-        setInfo("Conta de administrador criada com sucesso. Faça login.");
-        setMode("login");
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-        if (error) throw error;
-        if (!data.user) throw new Error("Usuário não encontrado.");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      if (error) throw error;
+      if (!data.user) throw new Error("Usuário não encontrado.");
 
-        const authorized = await isAdmin(data.user.id, data.user.email);
-        if (!authorized) {
-          await supabase.auth.signOut();
-          throw new Error("Acesso negado: esta conta não possui privilégios de administrador.");
-        }
-
-        navigate({ to: "/admin" });
+      const authorized = await isAdmin(data.user.id, data.user.email);
+      if (!authorized) {
+        await supabase.auth.signOut();
+        throw new Error("Acesso negado: esta conta não possui privilégios de administrador.");
       }
+
+      navigate({ to: "/admin" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha na autenticação.");
     } finally {
@@ -89,27 +72,6 @@ function AuthPage() {
           <div className="font-arcade text-xs text-arcade-dark mt-2">
             PAINEL DO ADMINISTRADOR
           </div>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => setMode("login")}
-            className={`flex-1 font-arcade text-[10px] py-2 border-2 border-arcade-dark ${
-              mode === "login" ? "bg-arcade-yellow text-arcade-dark" : "bg-arcade-cream text-arcade-dark"
-            }`}
-          >
-            ENTRAR
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("signup")}
-            className={`flex-1 font-arcade text-[10px] py-2 border-2 border-arcade-dark ${
-              mode === "signup" ? "bg-arcade-yellow text-arcade-dark" : "bg-arcade-cream text-arcade-dark"
-            }`}
-          >
-            CRIAR CONTA
-          </button>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3">
@@ -135,7 +97,7 @@ function AuthPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-3 border-2 border-arcade-dark bg-white font-body text-lg text-arcade-dark placeholder:text-arcade-dark/40 tracking-[0.3em]"
               placeholder="••••••••"
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              autoComplete="current-password"
             />
           </div>
           {error && (
@@ -143,17 +105,12 @@ function AuthPage() {
               {error}
             </div>
           )}
-          {info && (
-            <div className="font-body text-sm text-arcade-dark border-2 border-arcade-green px-3 py-2 bg-arcade-green/10">
-              {info}
-            </div>
-          )}
           <button
             type="submit"
             disabled={loading}
             className="w-full font-arcade text-xs bg-arcade-red text-arcade-cream border-2 border-arcade-dark py-3 hover:bg-arcade-dark disabled:opacity-60"
           >
-            {loading ? "..." : mode === "login" ? "ENTRAR" : "CRIAR CONTA"}
+            {loading ? "..." : "ENTRAR"}
           </button>
         </form>
 
