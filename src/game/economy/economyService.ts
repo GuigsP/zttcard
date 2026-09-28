@@ -1,6 +1,7 @@
-import { readJSON, writeJSON } from "../storage";
+import { LS_KEYS, readJSON, writeJSON } from "../storage";
 import { getMasterCatalog, getCardById } from "./cardCatalog";
 import { checkIsCardExclusive } from "../cardsRepo";
+import type { Position } from "../types";
 import type {
   CardRarity,
   CardRecycleResult,
@@ -442,13 +443,40 @@ export function rollRarity(
   return selectedRarity;
 }
 
-// Sorteia carta concreta do catálogo a partir da raridade com proteção Anti-Clone (sem cartas idênticas no mesmo pacote)
+// ==========================================
+// 8.1. LISTA NEGRA DE CARTAS EM PACOTES GRÁTIS
+// Nenhuma dessas cartas sai no Pacotinho Diário ou pacotes grátis/cortesia
+// ==========================================
+export const BLACKLIST_FREE_PACKS: string[] = [
+  "the-best-9",
+  "ronaldo-fenomeno-98",
+  "romario-94",
+  "pele-10",
+  "maradona-86",
+  "zico-82",
+  "sccp-90-neto-ouro",
+];
+
+export function isCardBlacklistedFromFreePacks(cardId: string): boolean {
+  if (!cardId) return false;
+  const normId = cardId.toLowerCase().trim();
+  return BLACKLIST_FREE_PACKS.some(
+    (blocked) => normId.includes(blocked) || blocked === normId
+  );
+}
+
+// Sorteia carta concreta do catálogo a partir da raridade com proteção Anti-Clone e proteção de Blacklist
 export function drawCardByRarity(
   rarity: CardRarity,
-  excludeIds?: Set<string>
+  excludeIds?: Set<string>,
+  isFreePack = false
 ): CatalogCard {
   const allCards = getMasterCatalog();
-  const nonExclusive = allCards.filter((c) => !checkIsCardExclusive(c.id));
+  const nonExclusive = allCards.filter((c) => {
+    if (checkIsCardExclusive(c.id)) return false;
+    if (isFreePack && isCardBlacklistedFromFreePacks(c.id)) return false;
+    return true;
+  });
   const poolBase = nonExclusive.length > 0 ? nonExclusive : allCards;
 
   // Filtra por raridade excluindo IDs já sorteados neste pacote
@@ -494,6 +522,7 @@ export function openPackTransaction(
     costPaid = payment;
   }
 
+  const isFreePack = Boolean(pack.isDailyFree);
   const isPityTriggered =
     pity.packsSinceLastLenda >= pity.thresholdLendaGuarantee;
 
@@ -535,10 +564,10 @@ export function openPackTransaction(
       }
     }
 
-    // Puxa a carta concreta com garantia Anti-Clone
+    // Puxa a carta concreta com garantia Anti-Clone e proteção de Blacklist em pacotes grátis
     const card = catalogPullFn
       ? catalogPullFn(rarity, packCardIds)
-      : drawCardByRarity(rarity, packCardIds);
+      : drawCardByRarity(rarity, packCardIds, isFreePack);
 
     if (card && card.id) {
       packCardIds.add(card.id);
@@ -566,15 +595,194 @@ export function openPackTransaction(
 // 10. RECURSOS DO INVENTÁRIO DO JOGADOR
 // ==========================================
 function getInitialInventory(): Record<string, number> {
+  return {};
+}
+
+export function isStarterPackClaimed(): boolean {
+  return readJSON<boolean>(LS_KEYS.starterPackClaimed) === true;
+}
+
+export type StarterSquadKey = "copa-90" | "parque-sao-jorge-90" | "copa-94";
+
+export interface StarterSquadOption {
+  key: StarterSquadKey;
+  name: string;
+  badgeEmoji: string;
+  themeGradient: string;
+  borderColor: string;
+  flagColor: string;
+  tagline: string;
+  description: string;
+}
+
+export const STARTER_SQUADS: StarterSquadOption[] = [
+  {
+    key: "copa-90",
+    name: "Esquadrão Canarinho 90",
+    badgeEmoji: "🔵",
+    themeGradient: "from-blue-950 via-blue-900 to-indigo-950",
+    borderColor: "border-blue-400",
+    flagColor: "text-blue-400",
+    tagline: "A magia da Seleção de 1990",
+    description: "Técnica apurada, velocidade nas laterais e pontas afiados para furar retrancas.",
+  },
+  {
+    key: "parque-sao-jorge-90",
+    name: "Parque São Jorge 90",
+    badgeEmoji: "⚫",
+    themeGradient: "from-neutral-950 via-zinc-900 to-black",
+    borderColor: "border-arcade-yellow",
+    flagColor: "text-arcade-yellow",
+    tagline: "Raça e tradição alvinegra",
+    description: "Fibra, garra e marcação pesada. O esquadrão campeão nacional de 1990.",
+  },
+  {
+    key: "copa-94",
+    name: "Mestres da Raça 94",
+    badgeEmoji: "🔴",
+    themeGradient: "from-rose-950 via-red-950 to-neutral-950",
+    borderColor: "border-amber-400",
+    flagColor: "text-amber-400",
+    tagline: "A força do esquadrão tetracampeão",
+    description: "Meio-campo implacável, combate feroz e oportunismo clínico na área adversária.",
+  },
+];
+
+export type EnvelopeType = "defesa" | "meio" | "ataque";
+
+export interface EnvelopeConfig {
+  type: EnvelopeType;
+  title: string;
+  subtitle: string;
+  icon: string;
+  cardCount: number;
+  positions: Position[];
+  gradient: string;
+}
+
+export const ENVELOPE_CONFIGS: Record<EnvelopeType, EnvelopeConfig> = {
+  defesa: {
+    type: "defesa",
+    title: "ENVELOPE 1: A MURALHA DEFENSIVA",
+    subtitle: "O paredão lá atrás: Goleiro, Laterais e Xerife da zaga.",
+    icon: "🛡️",
+    cardCount: 4,
+    positions: ["GOL", "LD", "ZAD", "LE"],
+    gradient: "from-sky-700 to-blue-900",
+  },
+  meio: {
+    type: "meio",
+    title: "ENVELOPE 2: A MEIÚCA DE OURO",
+    subtitle: "O cérebro do time: Volante marcador, Meia central e Camisa 10 clássico.",
+    icon: "⚙️",
+    cardCount: 4,
+    positions: ["ZAE", "VOL", "M8", "M10"],
+    gradient: "from-emerald-700 to-green-950",
+  },
+  ataque: {
+    type: "ataque",
+    title: "ENVELOPE 3: O ATAQUE DEMOLIDOR",
+    subtitle: "Os homens-gol: Ponta Direita, Ponta Esquerda e o Artilheiro matador!",
+    icon: "⚡",
+    cardCount: 3,
+    positions: ["PD", "PE", "ATA"],
+    gradient: "from-amber-600 to-red-800",
+  },
+};
+
+export function openStarterEnvelope(
+  squadKey: StarterSquadKey,
+  envelopeType: EnvelopeType
+): {
+  success: boolean;
+  cards: { card: CatalogCard; wasNewInAlbum: boolean }[];
+  envelope: EnvelopeConfig;
+  error?: string;
+} {
+  const envConfig = ENVELOPE_CONFIGS[envelopeType];
   const catalog = getMasterCatalog();
-  const initial: Record<string, number> = {};
-  const sampleIndices = [0, 4, 12, 22, 33, 45];
-  sampleIndices.forEach((idx) => {
-    if (catalog[idx]) {
-      initial[catalog[idx].id] = 1;
+  if (!catalog || catalog.length === 0) {
+    return { success: false, cards: [], envelope: envConfig, error: "Catálogo não carregado." };
+  }
+
+  const selectedCards: CatalogCard[] = [];
+  const chosenIds = new Set<string>();
+
+  for (const pos of envConfig.positions) {
+    let candidate = catalog.find(
+      (c) =>
+        c.position === pos &&
+        !chosenIds.has(c.id) &&
+        !isCardBlacklistedFromFreePacks(c.id) &&
+        (c.collection === squadKey || c.pack_ids?.includes(squadKey))
+    );
+
+    if (!candidate) {
+      candidate = catalog.find(
+        (c) =>
+          c.position === pos &&
+          !chosenIds.has(c.id) &&
+          !isCardBlacklistedFromFreePacks(c.id) &&
+          (c.collection === "fundador" || c.collection.includes("copa"))
+      );
     }
-  });
-  return initial;
+
+    if (!candidate) {
+      candidate = catalog.find(
+        (c) =>
+          c.position === pos &&
+          !chosenIds.has(c.id) &&
+          !isCardBlacklistedFromFreePacks(c.id)
+      );
+    }
+
+    if (candidate) {
+      chosenIds.add(candidate.id);
+      selectedCards.push(candidate);
+    }
+  }
+
+  const results: { card: CatalogCard; wasNewInAlbum: boolean }[] = [];
+  for (const card of selectedCards) {
+    const { wasNewInAlbum } = addCardToInventory(card.id, 1);
+    results.push({ card, wasNewInAlbum });
+  }
+
+  return {
+    success: true,
+    cards: results,
+    envelope: envConfig,
+  };
+}
+
+export function claimFullStarterPack(squadKey: StarterSquadKey = "copa-90"): void {
+  const types: EnvelopeType[] = ["defesa", "meio", "ataque"];
+  for (const t of types) {
+    openStarterEnvelope(squadKey, t);
+  }
+  writeJSON(LS_KEYS.starterPackClaimed, true);
+  writeJSON(LS_KEYS.selectedCupPack, squadKey);
+}
+
+export function openStarterPack(squadKey: StarterSquadKey = "copa-90"): {
+  success: boolean;
+  cards: { card: CatalogCard; wasNewInAlbum: boolean }[];
+  error?: string;
+} {
+  const allCards: { card: CatalogCard; wasNewInAlbum: boolean }[] = [];
+  const types: EnvelopeType[] = ["defesa", "meio", "ataque"];
+  for (const t of types) {
+    const res = openStarterEnvelope(squadKey, t);
+    if (res.success) {
+      allCards.push(...res.cards);
+    }
+  }
+  writeJSON(LS_KEYS.starterPackClaimed, true);
+  writeJSON(LS_KEYS.selectedCupPack, squadKey);
+  return {
+    success: allCards.length > 0,
+    cards: allCards,
+  };
 }
 
 export function getPlayerInventory(): Record<string, number> {

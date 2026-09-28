@@ -27,6 +27,7 @@ import { getPlayerLevel } from "../playerLevel";
 import { sound } from "../audio";
 import { RetroBoombox } from "./RetroBoombox";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { LS_KEYS, readJSON, writeJSON } from "../storage";
 
 type Props = {
   onStart: (d: Difficulty, cupPackSlug: string) => void;
@@ -35,8 +36,10 @@ type Props = {
   onOpenAlbum: () => void;
   onOpenShop: () => void;
   onOpenTrades: () => void;
+  onOpenCarteira?: () => void;
   lastResult: LastResult | null;
   initialPack: string;
+  initialSection?: MenuSection;
 };
 
 type MenuSection = "jogar" | "album" | "banca" | "pracinha" | "carteira" | "tutorial";
@@ -55,20 +58,39 @@ export function StartScreen({
   onOpenAlbum,
   onOpenShop,
   onOpenTrades,
+  onOpenCarteira,
   lastResult,
   initialPack,
+  initialSection = "jogar",
 }: Props) {
-  const [activeSection, setActiveSection] = useState<MenuSection>("jogar");
+  const [activeSection, setActiveSection] = useState<MenuSection>(initialSection);
   const [gameStep, setGameStep] = useState<GameStep>("select_mode");
-  const [selectedPack, setSelectedPack] = useState<string>(initialPack);
+  const [selectedPack, setSelectedPack] = useState<string>(() => {
+    return readJSON<string>(LS_KEYS.selectedCupPack) || initialPack || "copa-90";
+  });
+  const [playMode, setPlayMode] = useState<"solo" | "online">("solo");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(() => {
+    return readJSON<Difficulty>(LS_KEYS.difficulty) || "NORMAL";
+  });
+  const [showPackDrawer, setShowPackDrawer] = useState(false);
 
+  useEffect(() => {
+    if (initialSection) {
+      setActiveSection(initialSection);
+    }
+  }, [initialSection]);
+
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [isAdminUser, setIsAdminUser] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const email = data?.user?.email?.toLowerCase().trim();
-      if (email && ADMIN_EMAILS.includes(email)) {
-        setIsAdminUser(true);
+      if (email) {
+        setCurrentUserEmail(email);
+        if (ADMIN_EMAILS.includes(email)) {
+          setIsAdminUser(true);
+        }
       }
     }).catch(() => {});
   }, []);
@@ -105,6 +127,26 @@ export function StartScreen({
 
   const selectSection = (sec: MenuSection) => {
     sound.playAttrSelect();
+    if (sec === "album") {
+      onOpenAlbum();
+      return;
+    }
+    if (sec === "banca") {
+      onOpenShop();
+      return;
+    }
+    if (sec === "pracinha") {
+      onOpenTrades();
+      return;
+    }
+    if (sec === "carteira") {
+      if (onOpenCarteira) {
+        onOpenCarteira();
+      } else {
+        setActiveSection("carteira");
+      }
+      return;
+    }
     setActiveSection(sec);
     if (sec === "jogar") setGameStep("select_mode");
   };
@@ -132,22 +174,22 @@ export function StartScreen({
               </div>
             </button>
 
-            {/* Bloco Nível + XP bar (visível a partir de sm) */}
+            {/* Bloco Nível + XP bar (visível no mobile e desktop) */}
             <button
               type="button"
               onClick={() => selectSection("carteira")}
-              className="hidden sm:flex items-center gap-1.5 bg-arcade-blue/50 hover:bg-arcade-blue/80 border border-arcade-yellow/40 hover:border-arcade-yellow rounded-lg px-2.5 py-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
+              className="flex items-center gap-1 sm:gap-1.5 bg-arcade-blue/50 hover:bg-arcade-blue/80 border border-arcade-yellow/40 hover:border-arcade-yellow rounded-lg px-2 py-1 sm:px-2.5 sm:py-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
               title="Ver Perfil e Carteira"
             >
-              <span className="text-sm">⭐</span>
+              <span className="text-xs sm:text-sm">⭐</span>
               <div className="flex flex-col items-start">
-                <div className="flex items-center gap-1.5 leading-none">
-                  <span className="font-arcade text-[10px] text-arcade-yellow font-bold">NV. {playerLevel.level}</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 leading-none">
+                  <span className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow font-bold">NV. {playerLevel.level}</span>
                   <span className="hidden lg:inline font-arcade text-[8px] text-arcade-cream/60">
                     {playerLevel.xp} XP
                   </span>
                 </div>
-                <div className="w-16 lg:w-24 bg-black/60 h-1.5 rounded-full overflow-hidden mt-1 border border-arcade-yellow/30">
+                <div className="hidden sm:block w-16 lg:w-24 bg-black/60 h-1.5 rounded-full overflow-hidden mt-1 border border-arcade-yellow/30">
                   <div
                     className="bg-gradient-to-r from-yellow-400 via-amber-400 to-amber-500 h-full transition-all duration-500 shadow-[0_0_6px_rgba(255,200,0,0.6)]"
                     style={{ width: `${playerLevel.progressPercent}%` }}
@@ -239,6 +281,28 @@ export function StartScreen({
               <OnlineBadge compact />
             </div>
 
+            {/* Login / Conta */}
+            {currentUserEmail ? (
+              <button
+                type="button"
+                onClick={() => selectSection("carteira")}
+                className="font-arcade text-[8px] sm:text-[9px] bg-arcade-blue/60 hover:bg-arcade-blue text-arcade-cream border border-arcade-yellow/40 rounded px-2 py-1 flex items-center gap-1 transition-colors cursor-pointer"
+                title={`Conectado como ${currentUserEmail}. Clique para gerenciar.`}
+              >
+                <span>👤</span>
+                <span className="hidden md:inline max-w-[70px] truncate">{currentUserEmail.split("@")[0]}</span>
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                className="font-arcade text-[8px] sm:text-[9px] bg-gradient-to-r from-arcade-yellow to-amber-500 hover:brightness-110 text-arcade-dark font-black border border-arcade-cream rounded px-2 py-1 flex items-center gap-1 transition-transform active:scale-95 shadow"
+                title="Entrar ou Criar Conta"
+              >
+                <span>🔑</span>
+                <span>ENTRAR</span>
+              </Link>
+            )}
+
             {/* Admin */}
             {isAdminUser && (
               <Link
@@ -276,116 +340,303 @@ export function StartScreen({
       {/* 1. PAINEL CENTRAL DINÂMICO (CENTER STAGE) */}
       <main className="flex-1 flex flex-col justify-start items-center p-3 sm:p-6 md:p-8 relative overflow-y-auto pb-48">
         <div className="w-full max-w-[94vw] 2xl:max-w-7xl flex flex-col items-center">
-          {/* SEÇÃO 1: JOGAR */}
+          {/* SEÇÃO 1: JOGAR (HUB DE BATALHA ESTILO CLASH ROYALE) */}
           {activeSection === "jogar" && (
-            <div className="w-full flex flex-col items-center animate-in fade-in duration-200">
-              {gameStep === "select_mode" && (
-                <>
-                  <div className="text-center mb-6">
-                    <div className="font-arcade text-xs text-arcade-yellow tracking-wider mb-1">
-                      ESCOLHA O MODO DE JOGO
-                    </div>
-                    <div className="font-display text-2xl text-arcade-cream">
-                      PRONTO PARA ENTRAR EM CAMPO?
+            <div className="w-full max-w-xl flex flex-col items-center gap-4 animate-in fade-in duration-200">
+
+              {/* 1. ARENA RETRÔ / ESTÁDIO ANOS 90 (HERO STAGE) */}
+              <div className="w-full bg-gradient-to-b from-emerald-950/85 via-slate-950 to-arcade-dark border-3 border-arcade-yellow rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+                {/* Efeito Holofotes do Estádio */}
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-28 bg-arcade-yellow/15 blur-2xl rounded-full pointer-events-none" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-80" />
+
+                {/* Cabeçalho da Arena */}
+                <div className="flex items-center justify-between mb-3 relative z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🏟️</span>
+                    <div>
+                      <div className="font-arcade text-[8px] sm:text-[9px] text-emerald-400 tracking-widest uppercase">
+                        ARENA DE DUELO RETRÔ
+                      </div>
+                      <div className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight">
+                        ESTÁDIO DOS ANOS 90
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mb-6">
+                  {/* Nível do Treinador */}
+                  <div className="flex items-center gap-1.5 bg-black/60 border border-arcade-yellow/40 rounded-xl px-2.5 py-1">
+                    <span className="text-sm">⭐</span>
+                    <div className="text-right">
+                      <div className="font-arcade text-[9px] text-arcade-yellow font-bold leading-none">
+                        NV. {playerLevel.level}
+                      </div>
+                      <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[90px] truncate">
+                        {playerLevel.title}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Diorama / Gramado Estilizado */}
+                <div className="w-full bg-gradient-to-b from-emerald-800 to-emerald-950 rounded-xl p-3 border-2 border-emerald-500/40 relative flex flex-col items-center justify-center my-1 shadow-inner overflow-hidden">
+                  {/* Linhas do Campo de Futebol */}
+                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-px bg-white/20 pointer-events-none" />
+                  <div className="absolute w-16 h-16 rounded-full border border-white/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 border-b border-x border-white/20 pointer-events-none" />
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-5 border-t border-x border-white/20 pointer-events-none" />
+
+                  {/* Centro do Campo com Bola */}
+                  <div className="relative z-10 flex flex-col items-center text-center py-2">
+                    <div className="w-12 h-12 rounded-full bg-black/40 border-2 border-arcade-yellow flex items-center justify-center text-2xl shadow-lg mb-1 animate-pulse">
+                      ⚽
+                    </div>
+                    <div className="font-arcade text-[10px] text-arcade-yellow font-bold drop-shadow tracking-wider">
+                      {playMode === "solo" ? "DISPUTA SOLO VS IA" : "DUELO MULTIPLAYER 1X1"}
+                    </div>
+                    <div className="font-body text-[10px] text-arcade-cream/80 max-w-xs mt-0.5">
+                      {playMode === "solo"
+                        ? "Enfrente a IA tática com calibração adaptativa e ganhe Contos!"
+                        : "Desafie um amigo ao vivo com código de sala e Traps!"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Barra de XP de Carreira */}
+                <div className="mt-3 relative z-10">
+                  <div className="flex justify-between items-center font-arcade text-[8px] text-arcade-cream/80 mb-1">
+                    <span>PROGRESSO DE CARREIRA</span>
+                    <span className="text-arcade-yellow">{playerLevel.xp} / {playerLevel.nextLevelXp} XP</span>
+                  </div>
+                  <div className="w-full bg-black/70 h-2 rounded-full overflow-hidden border border-arcade-yellow/30">
+                    <div
+                      className="h-full bg-gradient-to-r from-yellow-400 via-amber-400 to-amber-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,200,0,0.8)]"
+                      style={{ width: `${playerLevel.progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Mini Placar do Último Jogo */}
+                {lastResult && (
+                  <div className="mt-2.5 bg-black/50 border border-arcade-yellow/30 rounded-xl px-3 py-1.5 flex items-center justify-between">
+                    <span className="font-arcade text-[8px] text-arcade-cream/70">ÚLTIMO PLACAR:</span>
+                    <div className="flex items-center gap-1.5 font-arcade text-[10px]">
+                      <span className="text-arcade-yellow">{lastResult.goals.p}</span>
+                      <span className="text-arcade-cream/50">×</span>
+                      <span className="text-arcade-cream">{lastResult.goals.ai}</span>
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                        lastResult.goals.p > lastResult.goals.ai
+                          ? "bg-emerald-600 text-white"
+                          : lastResult.goals.p === lastResult.goals.ai
+                          ? "bg-amber-600 text-white"
+                          : "bg-rose-700 text-white"
+                      }`}>
+                        {lastResult.goals.p > lastResult.goals.ai ? "VITÓRIA" : lastResult.goals.p === lastResult.goals.ai ? "EMPATE" : "DERROTA"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. SELETOR DE MODO TÁTIL (SEGMENTED TABS) */}
+              <div className="w-full grid grid-cols-2 gap-2 bg-black/40 p-1.5 rounded-2xl border border-arcade-yellow/30 shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playAttrSelect();
+                    setPlayMode("solo");
+                  }}
+                  className={`py-2 px-3 rounded-xl font-arcade text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    playMode === "solo"
+                      ? "bg-gradient-to-r from-arcade-yellow to-amber-500 text-arcade-dark font-bold shadow-[0_2px_8px_rgba(255,204,0,0.4)] scale-[1.02]"
+                      : "text-arcade-cream/70 hover:text-arcade-cream hover:bg-white/5"
+                  }`}
+                >
+                  <span>🤖</span>
+                  <span>SOLO VS IA</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playAttrSelect();
+                    setPlayMode("online");
+                  }}
+                  className={`py-2 px-3 rounded-xl font-arcade text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
+                    playMode === "online"
+                      ? "bg-gradient-to-r from-arcade-yellow to-amber-500 text-arcade-dark font-bold shadow-[0_2px_8px_rgba(255,204,0,0.4)] scale-[1.02]"
+                      : "text-arcade-cream/70 hover:text-arcade-cream hover:bg-white/5"
+                  }`}
+                >
+                  <span>⚔️</span>
+                  <span>1X1 HUMANO</span>
+                  <span className="font-arcade text-[7px] bg-red-600 text-white px-1 py-0.2 rounded-full font-bold ml-1">
+                    AO VIVO
+                  </span>
+                </button>
+              </div>
+
+              {/* 3. ZONA DE AÇÃO DO POLEGAR */}
+              {playMode === "solo" ? (
+                <div className="w-full flex flex-col gap-3">
+                  {/* Ajustes Rápidos: Dificuldade + Coleção/Baralho */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                    {/* Seletor de Dificuldade da IA */}
+                    <div className="bg-arcade-dark/90 border-2 border-arcade-yellow/50 rounded-xl p-2.5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-arcade text-[8px] text-arcade-yellow uppercase">DIFICULDADE DA IA</span>
+                        <span className="font-arcade text-[7.5px] text-arcade-cream/60">
+                          {selectedDifficulty === "EASY" ? "TREINO" : selectedDifficulty === "NORMAL" ? "PADRÃO" : "PRO"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(["EASY", "NORMAL", "HARD"] as Difficulty[]).map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => {
+                              sound.playAttrSelect();
+                              setSelectedDifficulty(d);
+                              writeJSON(LS_KEYS.difficulty, d);
+                            }}
+                            className={`py-1 rounded font-arcade text-[9px] transition-all cursor-pointer ${
+                              selectedDifficulty === d
+                                ? "bg-arcade-yellow text-arcade-dark font-bold shadow"
+                                : "bg-arcade-blue/50 text-arcade-cream/70 hover:bg-arcade-blue hover:text-arcade-cream border border-arcade-yellow/20"
+                            }`}
+                          >
+                            {d === "EASY" ? "FÁCIL" : d === "NORMAL" ? "MÉDIO" : "DIFÍCIL"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Seletor de Baralho / Coleção Ativa */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playAttrSelect();
+                        setShowPackDrawer(true);
+                      }}
+                      className="bg-arcade-dark/90 hover:bg-slate-900 border-2 border-arcade-yellow/50 hover:border-arcade-yellow rounded-xl p-2.5 flex items-center justify-between text-left transition-all cursor-pointer active:scale-95 group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-lg bg-arcade-blue border border-arcade-yellow flex items-center justify-center font-arcade text-xs text-arcade-yellow shadow font-bold">
+                          {getPackTheme(selectedPack).badge ?? "90"}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-arcade text-[8px] text-arcade-yellow/80 uppercase leading-none">
+                            BARALHO ATIVO
+                          </span>
+                          <span className="font-arcade text-xs text-arcade-cream font-bold truncate max-w-[130px] sm:max-w-[160px] leading-tight mt-0.5">
+                            {availablePacks.find((p) => p.slug === selectedPack)?.name ?? "Copa 90"}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="font-arcade text-[10px] text-arcade-yellow bg-arcade-blue/60 border border-arcade-yellow/40 rounded px-2 py-1 group-hover:bg-arcade-yellow group-hover:text-arcade-dark transition-colors">
+                        TROCAR ▾
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* BOTÃO GIGANTE DE BATALHA (CLASH ROYALE STYLE) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playAttrSelect();
+                      onStart(selectedDifficulty, selectedPack);
+                    }}
+                    className="w-full group relative overflow-hidden rounded-2xl bg-gradient-to-b from-arcade-yellow via-amber-400 to-amber-500 border-3 border-arcade-cream py-3.5 sm:py-4 px-6 text-center cursor-pointer shadow-[0_6px_0_#92400e,0_12px_24px_rgba(0,0,0,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#92400e] transition-all"
+                  >
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-2xl sm:text-3xl group-hover:rotate-12 transition-transform">⚽</span>
+                      <div className="flex flex-col items-center">
+                        <span className="font-arcade text-lg sm:text-2xl text-arcade-dark font-black tracking-wider leading-none drop-shadow-[0_1px_2px_rgba(255,255,255,0.4)]">
+                          B A T A L H A
+                        </span>
+                        <span className="font-arcade text-[8px] sm:text-[9px] text-arcade-dark/80 tracking-widest uppercase mt-0.5">
+                          ENTRAR EM CAMPO VS IA · VALENDO CONTO 🪙
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                /* MODO 1X1 HUMANO */
+                <div className="w-full flex flex-col gap-3">
+                  <div className="bg-arcade-dark/90 border-2 border-arcade-yellow/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                    <div>
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                        <span className="text-xl">⚔️</span>
+                        <span className="font-arcade text-xs text-arcade-yellow font-bold">
+                          DUELO AO VIVO EM TEMPO REAL
+                        </span>
+                      </div>
+                      <p className="font-body text-xs text-arcade-cream/80 max-w-sm">
+                        Crie uma sala privada, passe o código de 5 letras para um amigo e dispute a partida inteira ao vivo!
+                      </p>
+                    </div>
                     <OnlineBadge />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                    {/* Botão Jogar vs IA */}
-                    <button
-                      onClick={() => {
-                        sound.playAttrSelect();
-                        setGameStep("config_ai");
-                      }}
-                      className="group bg-arcade-cream text-arcade-dark border-4 border-arcade-dark hover:border-arcade-yellow hover:bg-arcade-yellow shadow-arcade p-6 text-left transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative"
-                    >
-                      <div className="absolute top-3 right-3 font-arcade text-[8px] bg-red-900 text-white px-2 py-0.5 border border-arcade-yellow">
-                        IA LV. {playerLevel.level}
+                  {/* BOTÃO BATALHA 1X1 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playAttrSelect();
+                      onPlayHuman();
+                    }}
+                    className="w-full group relative overflow-hidden rounded-2xl bg-gradient-to-b from-rose-500 via-arcade-red to-red-700 border-3 border-arcade-yellow py-3.5 sm:py-4 px-6 text-center cursor-pointer shadow-[0_6px_0_#4c0519,0_12px_24px_rgba(0,0,0,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#4c0519] transition-all"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">⚔️</span>
+                      <div className="flex flex-col items-center">
+                        <span className="font-arcade text-lg sm:text-2xl text-white font-black tracking-wider leading-none drop-shadow">
+                          CRIAR OU ENTRAR NA SALA
+                        </span>
+                        <span className="font-arcade text-[8px] sm:text-[9px] text-white/90 tracking-widest uppercase mt-0.5">
+                          DISPUTA COM TRAPS E PÊNALTIS ONLINE
+                        </span>
                       </div>
-                      <div>
-                        <div className="font-arcade text-xl text-arcade-red group-hover:text-arcade-dark flex items-center justify-between mb-2">
-                          <span>🤖 VS COMPUTADOR</span>
-                          <span className="text-2xl">⚽</span>
-                        </div>
-                        <p className="font-body text-xs text-arcade-dark/90 leading-relaxed">
-                          Partida solo contra a IA adaptativa. Ela aprende com suas jogadas, calibra ao seu nível e rende <b>ZTT$</b> a cada vitória!
-                        </p>
-                      </div>
-                      <div className="font-arcade text-[10px] text-arcade-red group-hover:text-arcade-dark mt-3 font-bold">
-                        JOGAR AGORA ➔
-                      </div>
-                    </button>
-
-                    {/* Botão Jogar vs Humano */}
-                    <button
-                      onClick={() => {
-                        sound.playAttrSelect();
-                        onPlayHuman();
-                      }}
-                      className="group bg-arcade-yellow text-arcade-dark border-4 border-arcade-dark hover:border-arcade-red hover:bg-arcade-red hover:text-arcade-cream shadow-arcade p-6 text-left transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative"
-                    >
-                      <div className="absolute top-3 right-3 font-arcade text-[8px] bg-arcade-dark text-arcade-yellow px-2 py-0.5 border border-arcade-yellow">
-                        AO VIVO
-                      </div>
-                      <div>
-                        <div className="font-arcade text-xl text-arcade-red group-hover:text-arcade-cream flex items-center justify-between mb-2">
-                          <span>⚔️ VS HUMANO (1x1)</span>
-                        </div>
-                        <p className="font-body text-xs text-arcade-dark group-hover:text-arcade-cream leading-relaxed">
-                          Duelo online em tempo real. Crie uma sala, mande o código pro seu amigo e dispute com Traps e Pênaltis!
-                        </p>
-                      </div>
-                      <div className="font-arcade text-[10px] text-arcade-red group-hover:text-arcade-cream mt-3 font-bold">
-                        CRIAR OU ENTRAR NA SALA ➔
-                      </div>
-                    </button>
-                  </div>
-                </>
+                    </div>
+                  </button>
+                </div>
               )}
 
-              {/* Configuração da Partida vs IA */}
-              {gameStep === "config_ai" && (
-                <div className="w-full max-w-lg bg-arcade-dark border-4 border-arcade-yellow p-6 shadow-arcade flex flex-col gap-5">
-                  <div className="flex items-center justify-between border-b border-arcade-yellow/30 pb-3">
-                    <button
-                      onClick={() => setGameStep("select_mode")}
-                      className="font-arcade text-[10px] px-3 py-1.5 bg-arcade-blue text-arcade-cream border border-arcade-yellow hover:bg-arcade-red"
-                    >
-                      ← VOLTAR
-                    </button>
-                    <span className="font-arcade text-xs text-arcade-yellow">
-                      CONFIGURAR DUELO VS IA
-                    </span>
-                  </div>
-
-                  {lastResult && (
-                    <div className="font-arcade text-[10px] bg-arcade-blue/50 text-arcade-yellow p-2 border border-arcade-yellow text-center">
-                      ÚLTIMO JOGO: {lastResult.goals.p} × {lastResult.goals.ai} ·{" "}
-                      {DIFFICULTY_LABELS[lastResult.difficulty]}
+              {/* GAVETA / BOTTOM SHEET DE SELEÇÃO DE PACOTES */}
+              {showPackDrawer && (
+                <div
+                  className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+                  onClick={() => setShowPackDrawer(false)}
+                >
+                  <div
+                    className="bg-arcade-dark border-t-4 sm:border-4 border-arcade-yellow rounded-t-3xl sm:rounded-2xl w-full max-w-lg p-5 shadow-2xl max-h-[85vh] flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between border-b-2 border-arcade-yellow/30 pb-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🏆</span>
+                        <div>
+                          <h3 className="font-arcade text-sm text-arcade-yellow font-bold leading-tight">
+                            ESCOLHA A COLEÇÃO / DECK
+                          </h3>
+                          <span className="font-body text-[10px] text-arcade-cream/70">
+                            Cartas que entrarão em campo nesta partida
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPackDrawer(false)}
+                        className="w-8 h-8 rounded-full bg-arcade-blue border border-arcade-yellow text-arcade-yellow hover:bg-arcade-red hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  )}
 
-                  {/* Card Informativo de Calibração da IA */}
-                  <div className="bg-arcade-blue/40 border border-arcade-yellow/60 p-3 text-left">
-                    <div className="flex items-center gap-1.5 font-arcade text-[9px] text-arcade-yellow mb-1">
-                      <span>🧠</span>
-                      <span>IA TÁTICA COM MEMÓRIA NO SUPABASE</span>
-                    </div>
-                    <p className="font-body text-[11px] text-arcade-cream/90 leading-relaxed">
-                      A máquina calibra sua inteligência ao seu <b>Nível {playerLevel.level} ({playerLevel.title})</b>. Conforme você sobe na carreira, ela joga mais pesado, antecipa seus descartes e reage com falas retrô provocadoras!
-                    </p>
-                  </div>
-
-                  {/* Seleção de Pacote de Copa ou Exclusivo */}
-                  <div>
-                    <div className="font-arcade text-[10px] text-arcade-yellow mb-1">
-                      1. ESCOLHA O BARALHO / COPA
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="overflow-y-auto pr-1 grid grid-cols-2 gap-2.5 py-1">
                       {availablePacks.map((p) => {
                         const t = getPackTheme(p.slug);
                         const isExcl = isPackExclusive(p);
@@ -397,20 +648,25 @@ export function StartScreen({
                             onClick={() => {
                               sound.playAttrSelect();
                               setSelectedPack(p.slug);
+                              writeJSON(LS_KEYS.selectedCupPack, p.slug);
+                              setShowPackDrawer(false);
                             }}
-                            className={`p-2 border-2 text-center transition-all relative ${
+                            className={`p-3 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between cursor-pointer active:scale-95 ${
                               isSelected
-                                ? "bg-arcade-yellow text-arcade-dark border-arcade-cream scale-105 shadow"
-                                : "bg-arcade-blue text-arcade-cream border-arcade-yellow/50 hover:bg-arcade-blue/80"
+                                ? "bg-gradient-to-br from-arcade-yellow to-amber-500 text-arcade-dark border-arcade-cream shadow-[0_0_12px_rgba(255,204,0,0.6)] font-bold scale-[1.02]"
+                                : "bg-arcade-blue/70 hover:bg-arcade-blue text-arcade-cream border-arcade-yellow/40 hover:border-arcade-yellow"
                             }`}
                           >
                             {isExcl && (
-                              <div className="absolute -top-2 -right-1 font-arcade text-[7px] bg-amber-500 text-arcade-dark px-1.5 py-0.2 border border-black rounded-full font-bold shadow">
+                              <span className="absolute -top-2 -right-1 font-arcade text-[7px] bg-amber-500 text-arcade-dark px-1.5 py-0.5 rounded-full font-bold shadow border border-black">
                                 ⭐ EXCLUSIVO
-                              </div>
+                              </span>
                             )}
-                            <div className="font-arcade text-xs">{t.badge ?? "90"}</div>
-                            <div className="font-arcade text-[9px] mt-0.5 truncate font-bold">
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <span className="font-arcade text-xs">{t.badge ?? "90"}</span>
+                              {isSelected && <span className="text-xs">✓ ATIVO</span>}
+                            </div>
+                            <div className="font-arcade text-[10px] truncate max-w-full">
                               {p.name}
                             </div>
                           </button>
@@ -418,36 +674,9 @@ export function StartScreen({
                       })}
                     </div>
                   </div>
-
-                  {/* Seleção de Dificuldade */}
-                  <div>
-                    <div className="font-arcade text-[10px] text-arcade-yellow mb-2">
-                      2. ESCOLHA A DIFICULDADE
-                    </div>
-                    <div className="grid gap-2">
-                      {DIFFS.map((d) => (
-                        <button
-                          key={d.key}
-                          onClick={() => onStart(d.key, selectedPack)}
-                          className="group bg-arcade-cream text-arcade-dark border-2 border-arcade-dark hover:bg-arcade-yellow hover:border-arcade-yellow p-3 text-left transition-all flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="font-arcade text-xs text-arcade-red group-hover:text-arcade-dark">
-                              {DIFFICULTY_LABELS[d.key]}
-                            </div>
-                            <div className="font-body text-[11px] text-arcade-dark/80">
-                              {d.desc}
-                            </div>
-                          </div>
-                          <span className="font-arcade text-xs text-arcade-red group-hover:text-arcade-dark">
-                            ▶
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               )}
+
             </div>
           )}
 
@@ -688,6 +917,44 @@ export function StartScreen({
                 </div>
               </div>
 
+              {/* Status da Conta / Salvar na Nuvem */}
+              <div className="w-full bg-arcade-blue/40 border-2 border-arcade-yellow/60 p-4 rounded-xl shadow text-left flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{currentUserEmail ? "☁️" : "🎮"}</span>
+                  <div>
+                    <div className="font-arcade text-xs text-arcade-yellow font-bold">
+                      {currentUserEmail ? "CONTA VINCULADA NA NUVEM" : "MODO CONVIDADO (VISITANTE)"}
+                    </div>
+                    <div className="font-body text-[11px] text-arcade-cream/80">
+                      {currentUserEmail
+                        ? `Conectado como: ${currentUserEmail}`
+                        : "Seu progresso está salvo apenas neste aparelho. Vincule uma conta para não perder suas cartas!"}
+                    </div>
+                  </div>
+                </div>
+
+                {currentUserEmail ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      sound.playAttrSelect();
+                      await supabase.auth.signOut();
+                      window.location.reload();
+                    }}
+                    className="font-arcade text-[10px] px-3 py-1.5 bg-arcade-red text-white border border-arcade-cream hover:bg-red-700 rounded transition-colors cursor-pointer"
+                  >
+                    SAIR DA CONTA
+                  </button>
+                ) : (
+                  <Link
+                    to="/auth"
+                    className="font-arcade text-[10px] px-4 py-2 bg-gradient-to-r from-arcade-yellow to-amber-500 text-arcade-dark border border-arcade-cream rounded font-bold shadow hover:brightness-105 transition-all cursor-pointer text-center"
+                  >
+                    💾 SALVAR NA NUVEM / ENTRAR
+                  </Link>
+                )}
+              </div>
+
               {/* Loja de Fichas de Ouro (Tabela R$) */}
               <div className="w-full text-left mt-2">
                 <h3 className="font-arcade text-xs text-arcade-yellow mb-2.5 flex items-center gap-1.5">
@@ -797,80 +1064,7 @@ export function StartScreen({
         </div>
       </main>
 
-      {/* 2. BOTTOM NAVIGATION (Aparece SOMENTE no Mobile) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none md:hidden">
-        <nav className="pointer-events-auto w-full bg-arcade-dark/95 backdrop-blur-md border-t-3 border-arcade-yellow px-2 sm:px-6 py-1.5 flex items-end justify-around pb-[max(0.4rem,env(safe-area-inset-bottom))]">
-          {/* Tab 1: Banca */}
-          <MobileNavTab
-            active={activeSection === "banca"}
-            icon="📰"
-            label="BANCA"
-            badge={dailyStatus.canClaim ? "GRÁTIS!" : undefined}
-            badgeColor="bg-arcade-green text-white animate-pulse"
-            onClick={() => selectSection("banca")}
-          />
-
-          {/* Tab 2: Álbum */}
-          <MobileNavTab
-            active={activeSection === "album"}
-            icon="📖"
-            label="ÁLBUM"
-            badge={`${progressPercent}%`}
-            badgeColor="bg-arcade-blue text-arcade-yellow border border-arcade-yellow/40"
-            onClick={() => selectSection("album")}
-          />
-
-          {/* Tab 3: JOGAR (HERO BUTTON - Centralizado) */}
-          <button
-            type="button"
-            onClick={() => selectSection("jogar")}
-            className={`flex flex-col items-center justify-center -mt-5 relative transition-all duration-200 active:scale-95 group cursor-pointer ${
-              activeSection === "jogar" ? "scale-105" : "hover:scale-105"
-            }`}
-          >
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border-3 shadow-arcade transition-all ${
-                activeSection === "jogar"
-                  ? "bg-gradient-to-b from-arcade-yellow to-amber-500 border-arcade-cream text-arcade-dark shadow-[0_0_20px_rgba(255,204,0,0.8)]"
-                  : "bg-gradient-to-b from-arcade-blue to-slate-900 border-arcade-yellow text-arcade-yellow hover:border-arcade-cream"
-              }`}
-            >
-              <span className="group-hover:rotate-12 transition-transform duration-200">
-                ⚽
-              </span>
-            </div>
-            <span
-              className={`font-arcade text-[8.5px] mt-1 tracking-wider ${
-                activeSection === "jogar"
-                  ? "text-arcade-yellow font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                  : "text-arcade-cream/70"
-              }`}
-            >
-              JOGAR
-            </span>
-          </button>
-
-          {/* Tab 4: Pracinha */}
-          <MobileNavTab
-            active={activeSection === "pracinha"}
-            icon="🌳"
-            label="PRACINHA"
-            badge={duplicates.length > 0 ? `${duplicates.length}x` : undefined}
-            badgeColor="bg-amber-500 text-arcade-dark font-bold"
-            onClick={() => selectSection("pracinha")}
-          />
-
-          {/* Tab 5: Carteira */}
-          <MobileNavTab
-            active={activeSection === "carteira"}
-            icon="🪙"
-            label="CARTEIRA"
-            onClick={() => selectSection("carteira")}
-          />
-        </nav>
-      </div>
-
-      {/* 3. RADINHO RETRÔ FLUTUANTE (Walkman Esportivo Amarelo Anos 90 - Canto Inferior Direito) */}
+      {/* 2. RADINHO RETRÔ FLUTUANTE (Walkman Esportivo Amarelo Anos 90 - Canto Inferior Direito) */}
       <RetroBoombox floating />
     </div>
   );
@@ -915,59 +1109,6 @@ function DesktopNavTab({
         >
           {badge}
         </span>
-      )}
-    </button>
-  );
-}
-
-function MobileNavTab({
-  active,
-  icon,
-  label,
-  badge,
-  badgeColor = "bg-arcade-yellow text-arcade-dark",
-  onClick,
-}: {
-  active: boolean;
-  icon: string;
-  label: string;
-  badge?: string;
-  badgeColor?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 md:flex-initial md:px-4 flex flex-col items-center justify-center py-1 px-0.5 relative transition-all duration-150 active:scale-95 cursor-pointer ${
-        active ? "text-arcade-yellow" : "text-arcade-cream/60 hover:text-arcade-cream"
-      }`}
-    >
-      <div className="relative flex items-center justify-center">
-        <span
-          className={`text-xl md:text-2xl transition-transform ${
-            active ? "scale-110 drop-shadow-[0_2px_4px_rgba(255,204,0,0.4)]" : "opacity-80"
-          }`}
-        >
-          {icon}
-        </span>
-        {badge && (
-          <span
-            className={`absolute -top-1.5 -right-2.5 font-arcade text-[7px] md:text-[8px] leading-tight px-1 py-0.5 rounded-full font-bold shadow ${badgeColor}`}
-          >
-            {badge}
-          </span>
-        )}
-      </div>
-      <span
-        className={`font-arcade text-[7.5px] md:text-[8.5px] mt-0.5 tracking-wider truncate max-w-full ${
-          active ? "font-bold text-arcade-yellow" : "text-arcade-cream/70"
-        }`}
-      >
-        {label}
-      </span>
-      {active && (
-        <span className="w-1.5 h-1.5 rounded-full bg-arcade-yellow mt-0.5 shadow-[0_0_6px_rgba(255,204,0,0.8)]" />
       )}
     </button>
   );

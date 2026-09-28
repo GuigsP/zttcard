@@ -28,12 +28,22 @@ export function CardEditorModal({
   const [position, setPosition] = useState<Position>((initial.position as Position) ?? "GOL");
   const [side, setSide] = useState<"P" | "AI">(initial.side ?? "P");
 
-  // 2. Deck (Coleção / Moldura)
-  const [packIds, setPackIds] = useState<string[]>(() => {
-    if (initial.pack_ids && initial.pack_ids.length > 0) return initial.pack_ids;
-    // Default to first active pack or parque-sao-jorge-90
+  // 1. Deck (Coleção / Moldura)
+  const [selectedPackId, setSelectedPackId] = useState<string>(() => {
+    if (initial.pack_ids && initial.pack_ids.length > 0) {
+      const match = packs.find((p) => initial.pack_ids!.includes(p.id) || initial.pack_ids!.includes(p.slug));
+      if (match) return match.id;
+    }
+    const triplice = packs.find((p) => p.slug === "triplice-azul-03");
+    if (triplice && initial.card_number && initial.card_number >= 244 && initial.card_number <= 265) {
+      return triplice.id;
+    }
+    const welson = packs.find((p) => p.slug === "parque-sao-jorge-welson");
+    if (welson && initial.card_number && initial.card_number >= 233 && initial.card_number <= 243) {
+      return welson.id;
+    }
     const psj = packs.find((p) => p.slug === "parque-sao-jorge-90");
-    return psj ? [psj.id, psj.slug] : packs[0] ? [packs[0].id, packs[0].slug] : ["parque-sao-jorge-90"];
+    return psj ? psj.id : packs[0] ? packs[0].id : "founder";
   });
 
   // 3. Nome Real & 4. Nome Carta (Paródia)
@@ -143,17 +153,16 @@ export function CardEditorModal({
     });
   }
 
-  function togglePack(p: DBPack) {
-    setPackIds((cur) => {
-      const has = cur.includes(p.id) || cur.includes(p.slug);
-      if (has) {
-        return cur.filter((x) => x !== p.id && x !== p.slug);
-      }
-      return [...cur, p.id, p.slug];
-    });
-  }
+  // Resolução do pacote ativo
+  const activePack = packs.find((p) => p.id === selectedPackId || p.slug === selectedPackId) ?? packs[0];
+  const previewPackSlug = activePack?.slug;
+  const activeTheme = getPackTheme(previewPackSlug);
 
   function buildInput(): UpsertCardInput {
+    const packUuidsAndSlugs = activePack
+      ? Array.from(new Set([activePack.id, activePack.slug, ...(activePack.slug === FOUNDER_SLUG ? ["founder"] : [])]))
+      : ["founder"];
+
     return {
       id: initial.id,
       legacy_id: legacyId || null,
@@ -164,7 +173,7 @@ export function CardEditorModal({
       real_name: realName.trim() || null,
       attrs,
       quote: quote.trim(),
-      pack_ids: packIds,
+      pack_ids: packUuidsAndSlugs,
       image_url: imageUrl.trim() || null,
       club_badge_url: clubBadgeUrl.trim() || null,
     };
@@ -179,13 +188,6 @@ export function CardEditorModal({
     if (!onSaveAndNew) return;
     onSaveAndNew(buildInput());
   }
-
-  // Resolução do tema ativo da moldura
-  const activePack =
-    packs.find((p) => (packIds.includes(p.id) || packIds.includes(p.slug)) && p.slug !== FOUNDER_SLUG) ??
-    packs.find((p) => packIds.includes(p.id) || packIds.includes(p.slug));
-  const previewPackSlug = activePack?.slug;
-  const activeTheme = getPackTheme(previewPackSlug);
 
   const previewCard = {
     id: initial.id ?? "preview",
@@ -255,12 +257,59 @@ export function CardEditorModal({
         {/* LEFT COLUMN: FORM FIELDS IN EXACT REQUESTED ORDER */}
         <div className="lg:col-span-8 space-y-6">
           
-          {/* 1. POSIÇÃO */}
+          {/* 1. DECK (COLEÇÃO / MOLDURA) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                1. Posição em Campo
+                <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
+                1. Deck / Coleção Temática
+              </label>
+              {activePack && (
+                <span className="flex items-center gap-1.5 text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-black/50 shadow-sm"
+                    style={{ backgroundColor: activeTheme.border }}
+                  />
+                  <span>{activePack.name.toUpperCase()}</span>
+                  {!activePack.is_active && (
+                    <span className="text-amber-400 font-bold ml-1">🔒(Oculto)</span>
+                  )}
+                </span>
+              )}
+            </div>
+
+            <div className="relative">
+              <select
+                value={selectedPackId}
+                onChange={(e) => setSelectedPackId(e.target.value)}
+                className="w-full bg-slate-950 border border-blue-500/50 hover:border-blue-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30 text-white font-bold rounded-xl px-4 py-3 text-xs md:text-sm outline-none transition-all cursor-pointer appearance-none shadow-lg tracking-wide"
+              >
+                {packs.map((p) => {
+                  const isHidden = !p.is_active;
+                  return (
+                    <option key={p.id} value={p.id} className="bg-slate-950 text-white py-2">
+                      {isHidden ? "🔒 " : "📦 "} {p.name}{isHidden ? " (Oculto)" : ""}
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-blue-400">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Escolha a coleção para definir a moldura retrô, borda e regras de pacotes.
+            </p>
+          </div>
+
+          {/* 2. POSIÇÃO EM CAMPO */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                2. Posição em Campo
               </label>
               <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-800/60">
                 {POSITION_LABELS[position]}
@@ -283,38 +332,6 @@ export function CardEditorModal({
                     }`}
                   >
                     <span>{POSITION_SHORT[p]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 2. DECK (COLEÇÃO / MOLDURA) */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              2. Deck / Coleção Temática
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {packs.map((p) => {
-                const active = packIds.includes(p.id) || packIds.includes(p.slug) || (p.slug === FOUNDER_SLUG && packIds.includes("founder"));
-                const theme = getPackTheme(p.slug);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => togglePack(p)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border ${
-                      active
-                        ? "bg-slate-100 text-slate-950 border-white shadow-md font-bold"
-                        : "bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
-                    }`}
-                  >
-                    <span
-                      className="w-3 h-3 rounded-full border border-black/40"
-                      style={{ backgroundColor: theme.border }}
-                    />
-                    <span>{active ? "✓ " : ""}{p.name}{!p.is_active ? " 🔒(Oculto)" : ""}</span>
                   </button>
                 );
               })}
@@ -458,12 +475,12 @@ export function CardEditorModal({
             </div>
           </div>
 
-          {/* 6. ATRIBUTOS (POR POSIÇÃO) */}
+          {/* 8. ATRIBUTOS (POR POSIÇÃO) */}
           <div className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                6. Atributos da Posição ({POSITION_SHORT[position]})
+                8. Atributos da Posição ({POSITION_SHORT[position]})
               </label>
 
               {/* Overall badge preview */}
@@ -581,7 +598,7 @@ export function CardEditorModal({
               Visualização em Tempo Real
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5">
-              Moldura: <b className="text-emerald-400">{activeTheme.label}</b>
+              Moldura: <b className="text-emerald-400">{activePack ? activePack.name.toUpperCase() : activeTheme.label}</b>
             </div>
           </div>
 

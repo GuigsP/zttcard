@@ -129,7 +129,7 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
   // 0. Versão Miniatura Flutuante (Gadget Retrô Recolhido)
   if (floating && !isExpanded) {
     return (
-      <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] select-none text-zinc-950 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="fixed bottom-22 md:bottom-6 right-3 sm:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] select-none text-zinc-950 animate-in fade-in slide-in-from-bottom-2 duration-200">
         <button
           type="button"
           onClick={handleTogglePlay}
@@ -343,7 +343,7 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
 
   if (floating) {
     return (
-      <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 w-72 sm:w-80 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_5px_0_#18181b] rounded-2xl animate-in zoom-in-95 duration-200">
+      <div className="fixed bottom-22 md:bottom-6 right-3 sm:right-6 z-50 w-72 sm:w-80 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_5px_0_#18181b] rounded-2xl animate-in zoom-in-95 duration-200">
         {walkmanContent}
       </div>
     );

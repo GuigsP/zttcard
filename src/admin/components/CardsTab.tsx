@@ -9,11 +9,13 @@ type Props = {
   packs: DBPack[];
   onEdit: (c: DBCard) => void;
   onDelete: (id: string) => void;
+  onNewInPack?: (packId: string) => void;
+  onPackFilterChange?: (filter: string) => void;
 };
 
 type ViewMode = "gallery" | "table";
 
-export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
+export function CardsTab({ cards, packs, onEdit, onDelete, onNewInPack, onPackFilterChange }: Props) {
   const [side, setSide] = useState<"ALL" | "P" | "AI">("ALL");
   const [pos, setPos] = useState<"ALL" | Position>("ALL");
   const [tier, setTier] = useState<"ALL" | 0 | 1 | 2>("ALL");
@@ -21,6 +23,11 @@ export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("gallery");
   const [previewCardModal, setPreviewCardModal] = useState<DBCard | null>(null);
+
+  function handleSelectPackFilter(val: string) {
+    setPackFilter(val);
+    onPackFilterChange?.(val);
+  }
 
   const posOrder = useMemo(() => {
     const map: Record<string, number> = {};
@@ -94,7 +101,7 @@ export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
             <button
-              onClick={() => setPackFilter("ALL")}
+              onClick={() => handleSelectPackFilter("ALL")}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 packFilter === "ALL"
                   ? "bg-slate-100 text-slate-950 font-bold shadow"
@@ -110,7 +117,7 @@ export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
               return (
                 <button
                   key={p.id}
-                  onClick={() => setPackFilter(p.slug || p.id)}
+                  onClick={() => handleSelectPackFilter(p.slug || p.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                     isSelected
                       ? "bg-slate-100 text-slate-950 font-bold shadow"
@@ -128,6 +135,19 @@ export function CardsTab({ cards, packs, onEdit, onDelete }: Props) {
                 </button>
               );
             })}
+            {packFilter !== "ALL" && onNewInPack && (
+              <button
+                type="button"
+                onClick={() => {
+                  const p = packs.find((x) => x.slug === packFilter || x.id === packFilter);
+                  if (p) onNewInPack(p.id);
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white shadow transition-all cursor-pointer ml-auto"
+              >
+                <span>+</span>
+                <span>Nova Carta nesta Coleção</span>
+              </button>
+            )}
           </div>
         </div>
 

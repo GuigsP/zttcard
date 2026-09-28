@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchDecks } from "./cardsRepo";
 import type { Card, Difficulty, LastResult } from "./types";
 import { Scoreboard } from "./components/Scoreboard";
@@ -22,9 +24,13 @@ import { TradingCenter } from "./trades/TradingCenter";
 import { addCoins, MATCH_REWARDS } from "./economy/economyService";
 import { sound } from "./audio";
 
-type Screen = "start" | "playing" | "end" | "matchmaking" | "album" | "shop" | "trades";
+import { MobileNavDock, type LobbyScreen } from "./components/MobileNavDock";
+import { FtueGuideOverlay } from "./components/FtueGuideOverlay";
+
+type Screen = "start" | "playing" | "end" | "matchmaking" | "album" | "shop" | "trades" | "carteira";
 
 export function GameScreen() {
+  const navigate = useNavigate();
   const [screen, setScreen] = useState<Screen>("start");
   const [difficulty, setDifficulty] = useState<Difficulty>("NORMAL");
   const [lastResult, setLastResult] = useState<LastResult | null>(null);
@@ -33,9 +39,23 @@ export function GameScreen() {
   const [cupPack, setCupPack] = useState<string>("copa-90");
   const [loadingDecks, setLoadingDecks] = useState(false);
 
+  // Redirecionamento de novos visitantes para /auth (se não logado e nem visitante)
   useEffect(() => {
-    const done = readJSON<boolean>(LS_KEYS.tutorialDone);
-    if (!done) setShowTutorial(true);
+    const isGuest = readJSON<boolean>(LS_KEYS.guestAuth);
+    const hasWallet = readJSON<any>("ztt.economy.wallet");
+    const hasClaimed = readJSON<boolean>(LS_KEYS.starterPackClaimed);
+    const hasDoneTutorial = readJSON<boolean>(LS_KEYS.tutorialDone);
+
+    if (!isGuest && !hasWallet && !hasClaimed && !hasDoneTutorial) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (!data.session) {
+          navigate({ to: "/auth" });
+        }
+      });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     const stored = readJSON<LastResult>(LS_KEYS.lastResult);
     if (stored) setLastResult(stored);
     const storedDiff = readJSON<Difficulty>(LS_KEYS.difficulty);
@@ -86,6 +106,7 @@ export function GameScreen() {
   };
 
   const isSubCollection = ["album", "shop", "trades"].includes(screen);
+  const isLobby = ["start", "album", "shop", "trades", "carteira"].includes(screen);
 
   return (
     <>
@@ -102,7 +123,7 @@ export function GameScreen() {
         />
       )}
 
-      {screen === "start" && (
+      {(screen === "start" || screen === "carteira") && (
         <StartScreen
           onStart={start}
           onOpenTutorial={() => setShowTutorial(true)}
@@ -110,6 +131,8 @@ export function GameScreen() {
           onOpenAlbum={() => setScreen("album")}
           onOpenShop={() => setScreen("shop")}
           onOpenTrades={() => setScreen("trades")}
+          onOpenCarteira={() => setScreen("carteira")}
+          initialSection={screen === "carteira" ? "carteira" : "jogar"}
           lastResult={lastResult}
           initialPack={cupPack}
         />
@@ -119,6 +142,7 @@ export function GameScreen() {
         <AlbumView
           onBack={() => setScreen("start")}
           onOpenShop={() => setScreen("shop")}
+          onOpenTrades={() => setScreen("trades")}
         />
       )}
 
@@ -158,6 +182,22 @@ export function GameScreen() {
           onChangeDifficulty={() => setScreen("start")}
         />
       )}
+
+      {/* DOCK MOBILE FIXO ESTILO CLASH ROYALE */}
+      {isLobby && (
+        <MobileNavDock
+          activeScreen={screen}
+          onChangeScreen={(newScreen: LobbyScreen) => setScreen(newScreen)}
+        />
+      )}
+
+      {/* GUIA PASSO A PASSO INTERATIVO (FTUE - PRIMEIRO MINUTO) */}
+      <FtueGuideOverlay
+        currentScreen={screen}
+        onNavigate={(target) => setScreen(target)}
+        onStartFirstMatch={() => start("NORMAL", cupPack)}
+        matchFinished={screen === "end"}
+      />
     </>
   );
 }

@@ -27,6 +27,11 @@ export const LS_KEYS = {
   playerId: "ztt.mp.playerId",
   nickname: "ztt.mp.nickname",
   avatar: "ztt.mp.avatar",
+  // FTUE & Auth
+  guestAuth: "ztt.auth.guest",
+  starterPackClaimed: "ztt.ftue.starterPackClaimed",
+  ftueCompleted: "ztt.ftue.completed",
+  ftueStep: "ztt.ftue.step",
 };
 
 function uuid(): string {

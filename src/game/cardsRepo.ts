@@ -89,13 +89,32 @@ export function cardBelongsToPack(card: DBCard, packIdOrSlug: string, packs: DBP
     return true;
   }
 
+  const isWelson = (val: string) =>
+    val === "parque-sao-jorge-welson" ||
+    val === "0f624c9d-b835-4a89-ab53-396646560a45" ||
+    val.includes("welson");
+
+  // Regra garantida para o deck Welson: cartas #233 a #243 pertencem a Parque São Jorge Welson
+  if (isWelson(packIdOrSlug) && card.card_number >= 233 && card.card_number <= 243) {
+    return true;
+  }
+
+  const isTriplice = (val: string) =>
+    val === "triplice-azul-03" ||
+    val === "f6f1aed2-2d24-4073-a03a-63b40e4e1d47" ||
+    val.includes("triplice") ||
+    val.includes("azul-03");
+
+  // Regra garantida para o deck Tríplice Azul 03: cartas #244 a #265 pertencem a Tríplice Azul 03
+  if (isTriplice(packIdOrSlug) && card.card_number >= 244 && card.card_number <= 265) {
+    return true;
+  }
+
   if (!card.pack_ids || card.pack_ids.length === 0) return false;
 
   const isPsj = (val: string) =>
     val === "parque-sao-jorge-90" ||
-    val === "corinthians-90" ||
-    val.includes("parque-sao-jorge") ||
-    val.includes("parque");
+    val === "corinthians-90";
 
   const targetPack = packs.find((p) => p.id === packIdOrSlug || p.slug === packIdOrSlug);
   if (!targetPack) {
@@ -235,6 +254,20 @@ export async function listAllCards(): Promise<DBCard[]> {
       if (!currentPacks.includes("os-leoes")) currentPacks.push("os-leoes");
       if (!currentPacks.includes("587e1406-ea61-4bef-87f5-3d7a3fad5b96")) {
         currentPacks.push("587e1406-ea61-4bef-87f5-3d7a3fad5b96");
+      }
+    }
+    // Garante que as cartas #233-#243 de Welson sempre tenham os IDs e slugs vinculados
+    if (c.card_number >= 233 && c.card_number <= 243) {
+      if (!currentPacks.includes("parque-sao-jorge-welson")) currentPacks.push("parque-sao-jorge-welson");
+      if (!currentPacks.includes("0f624c9d-b835-4a89-ab53-396646560a45")) {
+        currentPacks.push("0f624c9d-b835-4a89-ab53-396646560a45");
+      }
+    }
+    // Garante que as cartas #244-#265 de Tríplice Azul 03 sempre tenham os IDs e slugs vinculados
+    if (c.card_number >= 244 && c.card_number <= 265) {
+      if (!currentPacks.includes("triplice-azul-03")) currentPacks.push("triplice-azul-03");
+      if (!currentPacks.includes("f6f1aed2-2d24-4073-a03a-63b40e4e1d47")) {
+        currentPacks.push("f6f1aed2-2d24-4073-a03a-63b40e4e1d47");
       }
     }
     return { ...c, name: (c.name || "").toUpperCase(), pack_ids: Array.from(new Set(currentPacks)) };
@@ -503,7 +536,7 @@ export async function listPacks(): Promise<DBPack[]> {
 
   // Garante que o pacote oficial Parque São Jorge - 90 está presente
   const psjPack = Array.from(packMap.values()).find(
-    (p) => p.slug === "parque-sao-jorge-90" || p.name.toLowerCase().includes("parque s")
+    (p) => p.slug === "parque-sao-jorge-90"
   );
   if (!psjPack) {
     packMap.set("parque-sao-jorge-90", {

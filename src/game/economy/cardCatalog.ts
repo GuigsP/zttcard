@@ -22,6 +22,7 @@ export function getMasterCatalog(): CatalogCard[] {
           cardNumber: card.card_number ?? idx + 1,
           slotNumber: card.card_number ?? idx + 1,
           collection: card.pack_ids?.[0] ?? "fundador",
+          pack_ids: card.pack_ids ?? [],
           rarity,
           marketValue: sellPrice,
           isExclusive: checkIsCardExclusive(cardId),

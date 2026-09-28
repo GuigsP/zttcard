@@ -51,7 +51,7 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
     if (res.success) {
       sound.playCoinEarn();
       setDuplicates(getDuplicatesList());
-      showToast(`Figurinha vendida! +${res.earnedCoins} Moedas ZTT.`);
+      showToast(`Figurinha vendida! +${res.earnedCoins} Conto.`);
     } else {
       sound.playPointLost();
       showToast("Não foi possível vender. Você só pode vender figurinhas repetidas!");
@@ -103,7 +103,7 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col p-4 md:p-8">
+    <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col p-4 md:p-8 pb-28 md:pb-8">
       {/* Toast */}
       {toastMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-arcade-dark border-2 border-arcade-yellow px-4 py-2 text-arcade-yellow font-arcade text-xs shadow-arcade animate-bounce">
@@ -270,7 +270,7 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
                             className="w-full font-arcade text-[9px] py-2 bg-arcade-green text-arcade-cream border-2 border-arcade-dark hover:bg-arcade-yellow hover:text-arcade-dark transition-all flex items-center justify-center gap-1"
                           >
                             <span>🪙</span>
-                            <span>VENDER (+{sellPrice})</span>
+                            <span>VENDER (+{sellPrice} CONTO)</span>
                           </button>
 
                           <button
@@ -403,7 +403,7 @@ export function TradingCenter({ onBack, onOpenShop }: Props) {
                           className="w-full font-arcade text-xs py-2.5 bg-arcade-green text-arcade-cream border-2 border-arcade-dark hover:bg-arcade-yellow hover:text-arcade-dark shadow-arcade flex items-center justify-center gap-1.5 transition-all active:scale-95"
                         >
                           <span>🪙</span>
-                          <span>COMPRAR POR {item.priceCoins} MOEDAS</span>
+                          <span>COMPRAR POR {item.priceCoins} CONTO</span>
                         </button>
                       )}
                     </div>

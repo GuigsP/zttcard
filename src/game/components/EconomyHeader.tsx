@@ -69,7 +69,7 @@ export function EconomyHeader({
         </div>
       </div>
 
-      <nav className="flex items-center gap-2">
+      <nav className="hidden md:flex items-center gap-2">
         <button
           onClick={() => {
             sound.playAttrSelect();

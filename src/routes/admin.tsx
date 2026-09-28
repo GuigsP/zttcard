@@ -49,6 +49,7 @@ function AdminPage() {
   const [cards, setCards] = useState<DBCard[]>([]);
   const [packs, setPacks] = useState<DBPack[]>([]);
   const [packCounts, setPackCounts] = useState<Record<string, number>>({});
+  const [cardsPackFilter, setCardsPackFilter] = useState<string>("ALL");
   const [activeTab, setActiveTab] = useState<AdminTab>("cards");
   const [editing, setEditing] = useState<Partial<DBCard> | null>(null);
   const [editingPack, setEditingPack] = useState<Partial<DBPack> | null>(null);
@@ -269,10 +270,16 @@ function AdminPage() {
     }
   }
 
-  const founderPack = packs.find((p) => p.slug === FOUNDER_SLUG);
-  const defaultPackIds = founderPack ? [founderPack.id] : [];
-
   function openNewCard(position?: Position, packId?: string, side?: "P" | "AI") {
+    let chosenPackId: string | undefined = packId;
+    if (!chosenPackId && cardsPackFilter !== "ALL") {
+      const p = packs.find((x) => x.id === cardsPackFilter || x.slug === cardsPackFilter);
+      if (p) chosenPackId = p.id;
+    }
+    if (!chosenPackId) {
+      chosenPackId = packs[0]?.id;
+    }
+
     setEditing({
       side: side ?? "P",
       position: position ?? "GOL",
@@ -280,7 +287,7 @@ function AdminPage() {
       name: "",
       real_name: "",
       quote: "",
-      pack_ids: packId ? [packId] : defaultPackIds,
+      pack_ids: chosenPackId ? [chosenPackId] : [],
     });
     setEditorKey((k) => k + 1);
   }
@@ -616,6 +623,11 @@ function AdminPage() {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             onDelete={handleDelete}
+            onNewInPack={(pId) => {
+              openNewCard(undefined, pId);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            onPackFilterChange={setCardsPackFilter}
           />
         )}
 

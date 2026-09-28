@@ -385,7 +385,7 @@ export function getPackTheme(slug?: string | null): PackTheme {
     return applyCustomFrame(
       {
         slug: clean,
-        label: "PARQUE SÃO JORGE 90",
+        label: clean.replace(/-/g, " ").toUpperCase(),
         border: "#111111",
         topBg: "#151515",
         topFg: "#f6f2e7",
@@ -493,19 +493,19 @@ export function getPackTheme(slug?: string | null): PackTheme {
     );
   }
 
-  if (clean.includes("cruzeiro")) {
+  if (clean.includes("cruzeiro") || clean.includes("triplice") || clean.includes("azul-03")) {
     return applyCustomFrame(
       {
         slug: clean,
-        label: clean.toUpperCase(),
-        border: "#003a70",
-        topBg: "#003a70",
+        label: clean.includes("triplice") ? "TRÍPLICE AZUL 03" : clean.toUpperCase(),
+        border: "#00e5ff",
+        topBg: "#151e36",
         topFg: "#ffffff",
         nameFont: '"Bebas Neue", "Arial Narrow", sans-serif',
-        badge: clean.match(/\d{2,4}/)?.[0] ?? "CRU",
-        accent: "#ffd60a",
-        frameStyle: "shield",
-        paletteIndex: 1,
+        badge: clean.match(/\d{2,4}/)?.[0] ?? "03",
+        accent: "#00e5ff",
+        frameStyle: "waves",
+        paletteIndex: 0,
       },
       clean
     );
@@ -547,7 +547,25 @@ export function getPackTheme(slug?: string | null): PackTheme {
     );
   }
 
-  return applyCustomFrame(THEMES.fundador, clean);
+  if (clean === "fundador" || clean === "founder") {
+    return applyCustomFrame(THEMES.fundador, clean);
+  }
+
+  return applyCustomFrame(
+    {
+      slug: clean,
+      label: clean.replace(/-/g, " ").toUpperCase(),
+      border: "#1a2a4a",
+      topBg: "#0d1b2a",
+      topFg: "#ffffff",
+      nameFont: '"Bebas Neue", "Arial Narrow", sans-serif',
+      badge: clean.match(/\d{2,4}/)?.[0] ?? clean.slice(0, 3).toUpperCase(),
+      accent: "#3b82f6",
+      frameStyle: "arcade_neon",
+      paletteIndex: 0,
+    },
+    clean
+  );
 }
 
 export const FOUNDER_PACK_SLUG = "fundador";
