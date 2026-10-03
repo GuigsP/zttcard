@@ -137,46 +137,78 @@ export function RetroBoombox({
   // 0. Versão Miniatura Flutuante (Gadget Retrô Recolhido)
   if (floating && !isExpanded) {
     const positionClass = inMatch
-      ? "fixed top-[58px] right-2 sm:right-4 md:top-auto md:bottom-6 md:right-6 z-40"
-      : "fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-40";
+      ? "fixed top-3 right-3 sm:top-[58px] sm:right-4 md:top-auto md:bottom-6 md:right-6 z-40"
+      : "fixed bottom-[68px] sm:bottom-20 md:bottom-6 right-3 sm:right-6 z-40";
 
     return (
-      <div className={`${positionClass} flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] select-none text-zinc-950 animate-in fade-in slide-in-from-bottom-2 duration-200`}>
-        <button
-          type="button"
-          onClick={handleTogglePlay}
-          className="w-7 h-7 rounded-full bg-zinc-950 hover:bg-zinc-800 text-arcade-yellow flex items-center justify-center text-xs font-bold active:scale-90 transition-transform shadow cursor-pointer"
-          title={isPlaying ? "Pausar som" : "Tocar som"}
-        >
-          {isPlaying ? "⏸" : "▶"}
-        </button>
+      <div className={`${positionClass} flex items-center select-none animate-in fade-in duration-200`}>
+        {/* Mobile (< sm): Botão circular ultra-compacto de 36px que NUNCA tapa o jogo */}
+        <div className="flex sm:hidden items-center gap-1 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full p-1 shadow-[0_4px_0_#18181b,0_8px_16px_rgba(0,0,0,0.6)]">
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            className="w-7 h-7 rounded-full bg-zinc-950 hover:bg-zinc-800 text-arcade-yellow flex items-center justify-center text-[10px] font-bold active:scale-90 transition-transform shadow cursor-pointer shrink-0"
+            title={isPlaying ? "Pausar rádio" : "Tocar rádio"}
+            aria-label={isPlaying ? "Pausar rádio" : "Tocar rádio"}
+          >
+            {isPlaying ? "⏸" : "▶"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => toggleExpanded(true)}
-          className="flex items-center gap-2 pl-0.5 pr-1 text-left cursor-pointer group"
-          title="Clique para abrir o Walkman Esportivo Completo"
-        >
-          <div className="flex flex-col">
-            <span className="font-arcade text-[6.5px] font-black tracking-wider text-zinc-900 leading-none">
-              SPORTS 90
-            </span>
-            <span className="font-arcade text-[8.5px] font-bold text-[#172554] leading-tight truncate max-w-[115px]">
-              {isTapeMode ? station.title : `${station.freq} ${station.title}`}
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={() => toggleExpanded(true)}
+            className="flex items-center gap-1 pr-1.5 pl-0.5 text-zinc-950 cursor-pointer active:scale-95"
+            title="Expandir Walkman"
+            aria-label="Expandir Walkman"
+          >
+            <span className="font-arcade text-[8px] font-black leading-none">📻</span>
+            {isPlaying && (
+              <span className="flex h-1.5 w-1.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-600 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
+              </span>
+            )}
+          </button>
+        </div>
 
-          {isPlaying && (
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-600 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-            </span>
-          )}
+        {/* Tablet & Desktop (>= sm): Pílula completa estilizada anos 90 */}
+        <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] text-zinc-950">
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            className="w-7 h-7 rounded-full bg-zinc-950 hover:bg-zinc-800 text-arcade-yellow flex items-center justify-center text-xs font-bold active:scale-90 transition-transform shadow cursor-pointer"
+            title={isPlaying ? "Pausar som" : "Tocar som"}
+          >
+            {isPlaying ? "⏸" : "▶"}
+          </button>
 
-          <div className="w-5 h-5 rounded-full bg-zinc-900/15 group-hover:bg-zinc-900/30 flex items-center justify-center text-[9px] text-zinc-900 font-bold transition-colors">
-            ▲
-          </div>
-        </button>
+          <button
+            type="button"
+            onClick={() => toggleExpanded(true)}
+            className="flex items-center gap-2 pl-0.5 pr-1 text-left cursor-pointer group"
+            title="Clique para abrir o Walkman Esportivo Completo"
+          >
+            <div className="flex flex-col">
+              <span className="font-arcade text-[6.5px] font-black tracking-wider text-zinc-900 leading-none">
+                SPORTS 90
+              </span>
+              <span className="font-arcade text-[8.5px] font-bold text-[#172554] leading-tight truncate max-w-[115px]">
+                {isTapeMode ? station.title : `${station.freq} ${station.title}`}
+              </span>
+            </div>
+
+            {isPlaying && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-600 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+              </span>
+            )}
+
+            <div className="w-5 h-5 rounded-full bg-zinc-900/15 group-hover:bg-zinc-900/30 flex items-center justify-center text-[9px] text-zinc-900 font-bold transition-colors">
+              ▲
+            </div>
+          </button>
+        </div>
       </div>
     );
   }

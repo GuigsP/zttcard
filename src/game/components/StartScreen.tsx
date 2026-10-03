@@ -461,8 +461,8 @@ export function StartScreen({
             <div className="w-full max-w-5xl xl:max-w-6xl flex flex-col gap-6 animate-in fade-in duration-200">
               <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
 
-                {/* ── COLUNA DA ESQUERDA: SEU ESQUADRÃO EM CAMPO (5 colunas no desktop) ── */}
-                <div className="w-full lg:col-span-5 flex flex-col gap-3">
+                {/* ── COLUNA DO ESQUADRÃO (Desktop: Esquerda / Mobile: Abaixo do Painel de Partida) ── */}
+                <div className="w-full lg:col-span-5 order-2 lg:order-1 flex flex-col gap-3">
                   <div className="w-full bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-900/95 border-3 border-arcade-yellow rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden backdrop-blur-md">
                     {/* Brilho de Fundo dos Refletores */}
                     <div className="absolute -top-16 -left-16 w-48 h-48 bg-arcade-yellow/15 blur-3xl rounded-full pointer-events-none" />
@@ -595,8 +595,8 @@ export function StartScreen({
                   </div>
                 </div>
 
-                {/* ── COLUNA DA DIREITA: PAINEL DE PARTIDA & CONFIGURAÇÕES (7 colunas no desktop) ── */}
-                <div className="w-full lg:col-span-7 flex flex-col gap-4">
+                {/* ── COLUNA DA DIREITA: PAINEL DE PARTIDA & CONFIGURAÇÕES (Mobile: Aparece no topo order-1) ── */}
+                <div className="w-full lg:col-span-7 order-1 lg:order-2 flex flex-col gap-4">
                   {/* 1. SELETOR DE MODO NO TOPO */}
                   <div className="w-full grid grid-cols-2 gap-2 bg-black/50 p-1.5 rounded-2xl border-2 border-arcade-yellow/40 shadow-inner">
                     <button

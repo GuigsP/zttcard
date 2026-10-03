@@ -23,19 +23,19 @@ export function PlayerHand({
   onSelectCard,
 }: Props) {
   return (
-    <div className="w-full max-w-4xl mx-auto mt-2 bg-gradient-to-b from-slate-900/90 via-slate-950/95 to-slate-900/90 border-2 border-arcade-yellow/50 p-3 sm:p-4 rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden">
+    <div className="w-full max-w-4xl mx-auto mt-1 sm:mt-2 bg-gradient-to-b from-slate-900/90 via-slate-950/95 to-slate-900/90 border-2 border-arcade-yellow/50 p-2 sm:p-4 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden">
       {/* Luz ambiente na bandeja de cartas */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-70" />
-      <div className="font-arcade text-[10px] sm:text-xs text-arcade-cream text-center mb-3 flex items-center justify-center gap-2 relative z-10">
+      <div className="font-arcade text-[9px] sm:text-xs text-arcade-cream text-center mb-1.5 sm:mb-3 flex items-center justify-center gap-1.5 sm:gap-2 relative z-10">
         <span>🃏</span>
         <span className="text-arcade-yellow font-bold uppercase tracking-wider">SUA MÃO — {POSITION_LABELS[pos]}</span>
         {phase === "SELECT_CARD" && (
-          <span className="text-arcade-dark bg-arcade-yellow px-2.5 py-0.5 rounded font-black text-[9px] shadow-[0_0_8px_rgba(255,214,10,0.8)] animate-pulse">
+          <span className="text-arcade-dark bg-arcade-yellow px-1.5 sm:px-2.5 py-0.5 rounded font-black text-[7.5px] sm:text-[9px] shadow-[0_0_8px_rgba(255,214,10,0.8)] animate-pulse">
             ESCOLHA SEU CRAQUE
           </span>
         )}
       </div>
-      <div className="flex gap-3 sm:gap-5 justify-center items-center flex-wrap relative z-10">
+      <div className="flex gap-1.5 sm:gap-4 justify-center items-center flex-nowrap relative z-10 overflow-x-auto pb-0.5">
         {pHand.map((c) => {
           const used = pUsedCardIds.includes(c.id);
           const isCurrent = pSelectedCardId === c.id;
@@ -43,19 +43,31 @@ export function PlayerHand({
           return (
             <div
               key={c.id}
-              className={`transition-all duration-200 ${
-                used ? "opacity-35 scale-95 grayscale" : isSelectable ? "hover:-translate-y-2 cursor-pointer hover:scale-105" : ""
+              className={`transition-all duration-200 shrink-0 ${
+                used ? "opacity-35 scale-95 grayscale" : isSelectable ? "hover:-translate-y-1 sm:hover:-translate-y-2 cursor-pointer hover:scale-105" : ""
               } ${
-                isSelectable ? "ring-4 ring-arcade-yellow rounded-md animate-pulse" : ""
+                isSelectable ? "ring-2 sm:ring-4 ring-arcade-yellow rounded-lg animate-pulse" : ""
               }`}
             >
-              <CardView
-                card={c}
-                small
-                selected={isCurrent}
-                highlightAttr={isCurrent ? chosenAttr : null}
-                onClick={isSelectable ? () => onSelectCard(c) : undefined}
-              />
+              {/* No mobile (tela < sm) usamos compact; no desktop usamos small */}
+              <div className="hidden sm:block">
+                <CardView
+                  card={c}
+                  small
+                  selected={isCurrent}
+                  highlightAttr={isCurrent ? chosenAttr : null}
+                  onClick={isSelectable ? () => onSelectCard(c) : undefined}
+                />
+              </div>
+              <div className="block sm:hidden">
+                <CardView
+                  card={c}
+                  compact
+                  selected={isCurrent}
+                  highlightAttr={isCurrent ? chosenAttr : null}
+                  onClick={isSelectable ? () => onSelectCard(c) : undefined}
+                />
+              </div>
             </div>
           );
         })}

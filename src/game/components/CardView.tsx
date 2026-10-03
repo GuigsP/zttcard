@@ -6,6 +6,7 @@ type Props = {
   card?: Card;
   faceDown?: boolean;
   small?: boolean;
+  compact?: boolean;
   highlightAttr?: AttrKey | null;
   selected?: boolean;
   onClick?: () => void;
@@ -16,14 +17,20 @@ export function CardView({
   card,
   faceDown,
   small,
+  compact,
   highlightAttr,
   selected,
   onClick,
   dim,
 }: Props) {
-  const size = small
-    ? "w-[154px] sm:w-[158px] h-[218px]"
-    : "w-[200px] h-[290px]";
+  const isCompact = compact;
+  const isSmallOrCompact = small || compact;
+
+  const size = isCompact
+    ? "w-[96px] xs:w-[104px] sm:w-[130px] md:w-[158px] h-[146px] xs:h-[156px] sm:h-[188px] md:h-[218px]"
+    : small
+      ? "w-[140px] sm:w-[158px] h-[200px] sm:h-[218px]"
+      : "w-[190px] sm:w-[200px] h-[275px] sm:h-[290px]";
 
   if (faceDown || !card) {
     return (
@@ -57,15 +64,15 @@ export function CardView({
         style={frameStyle}
         border={theme.border}
         accent={theme.accent}
-        small={small}
+        small={isSmallOrCompact}
       />
 
       {/* 2. CABEÇALHO DO CARD COM DESENHO INTEGRADO */}
       <div
-        className={`relative z-10 flex items-start justify-between pt-1 ${small ? "px-1.5" : "px-2"}`}
+        className={`relative z-10 flex items-start justify-between pt-0.5 sm:pt-1 ${isCompact ? "px-1" : small ? "px-1.5" : "px-2"}`}
         style={{ backgroundColor: theme.topBg, color: theme.topFg }}
       >
-        <div className="font-arcade text-[8px] leading-tight min-w-0 truncate flex-shrink flex items-center gap-1">
+        <div className={`font-arcade leading-tight min-w-0 truncate flex-shrink flex items-center gap-0.5 sm:gap-1 ${isCompact ? "text-[6.5px]" : "text-[8px]"}`}>
           {card.clubBadgeUrl && (
             <span
               className="inline-flex items-center justify-center flex-shrink-0"
@@ -75,18 +82,18 @@ export function CardView({
                 <img
                   src={card.clubBadgeUrl}
                   alt="Escudo"
-                  className={`${small ? "w-3.5 h-3.5" : "w-4.5 h-4.5"} object-contain rounded-xs drop-shadow-xs`}
+                  className={`${isCompact ? "w-2.5 h-2.5" : small ? "w-3.5 h-3.5" : "w-4.5 h-4.5"} object-contain rounded-xs drop-shadow-xs`}
                   loading="lazy"
                 />
               ) : (
-                <span className={small ? "text-xs" : "text-sm"}>{String(card.clubBadgeUrl || "")}</span>
+                <span className={isCompact ? "text-[9px]" : small ? "text-xs" : "text-sm"}>{String(card.clubBadgeUrl || "")}</span>
               )}
             </span>
           )}
-          <span>{small ? (POSITION_SHORT[card.position] ?? card.position ?? "JOG") : (POSITION_LABELS[card.position] ?? card.position ?? "JOGADOR")}</span>
+          <span>{isSmallOrCompact ? (POSITION_SHORT[card.position] ?? card.position ?? "JOG") : (POSITION_LABELS[card.position] ?? card.position ?? "JOGADOR")}</span>
         </div>
-        <div className={`flex items-center flex-shrink-0 ${small ? "gap-1" : "gap-1.5"}`}>
-          {theme.badge && (
+        <div className={`flex items-center flex-shrink-0 ${isCompact ? "gap-0.5" : small ? "gap-1" : "gap-1.5"}`}>
+          {theme.badge && !isCompact && (
             <div
               className="font-arcade text-[8px] leading-none px-1.5 py-0.5 rounded border"
               style={{
@@ -99,12 +106,12 @@ export function CardView({
               {theme.badge}
             </div>
           )}
-          {typeof card.cardNumber === "number" && (
+          {typeof card.cardNumber === "number" && !isCompact && (
             <div className="font-arcade text-[8px] leading-none bg-arcade-cream text-arcade-dark px-1.5 py-0.5 rounded border border-arcade-dark/40">
               #{String(card.cardNumber).padStart(3, "0")}
             </div>
           )}
-          <div className="font-arcade text-lg leading-none">{card.ovr}</div>
+          <div className={`font-arcade leading-none font-bold ${isCompact ? "text-sm xs:text-base" : "text-lg"}`}>{card.ovr}</div>
         </div>
       </div>
 
@@ -113,16 +120,16 @@ export function CardView({
         style={frameStyle}
         topBg={theme.topBg}
         accent={theme.accent}
-        small={small}
+        small={isSmallOrCompact}
       />
 
       {/* 4. RETRATO DO JOGADOR + NOME (OU NOME EM DESTAQUE) */}
       {card.imageUrl ? (
-        <div className={`flex-1 flex flex-col items-center justify-center min-w-0 relative z-10 ${small ? "px-1.5 py-0.5" : "px-2 py-1"}`}>
+        <div className={`flex-1 flex flex-col items-center justify-center min-w-0 relative z-10 ${isCompact ? "px-1 py-0.5" : small ? "px-1.5 py-0.5" : "px-2 py-1"}`}>
           {/* Portrait Container */}
           <div
             className={`w-full relative overflow-hidden rounded-md border-2 border-arcade-dark/30 shadow-inner flex items-center justify-center bg-arcade-dark/10 ${
-              small ? "h-[54px]" : "h-[90px]"
+              isCompact ? "h-[36px] xs:h-[42px] sm:h-[50px]" : small ? "h-[54px]" : "h-[90px]"
             }`}
           >
             <img
@@ -134,12 +141,12 @@ export function CardView({
           </div>
 
           {/* Nome do Jogador */}
-          <div className="w-full text-center mt-1">
+          <div className="w-full text-center mt-0.5 sm:mt-1">
             <div
               className="uppercase tracking-wider font-bold truncate text-arcade-dark drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
               style={{
                 fontFamily: theme.nameFont,
-                fontSize: small ? 11 : 14,
+                fontSize: isCompact ? 9 : small ? 11 : 14,
                 lineHeight: 1.1,
               }}
               title={card.name || ""}
@@ -149,13 +156,13 @@ export function CardView({
           </div>
         </div>
       ) : (
-        <div className={`flex-1 flex items-center justify-center text-center min-w-0 relative z-10 ${small ? "px-1" : "px-2"}`}>
-          {small ? (
+        <div className={`flex-1 flex items-center justify-center text-center min-w-0 relative z-10 ${isCompact ? "px-0.5" : small ? "px-1" : "px-2"}`}>
+          {isSmallOrCompact ? (
             <svg
               viewBox="0 0 100 20"
               preserveAspectRatio="xMidYMid meet"
               className="w-full"
-              style={{ height: 28 }}
+              style={{ height: isCompact ? 20 : 28 }}
               aria-label={card.name || ""}
             >
               <text
@@ -187,13 +194,13 @@ export function CardView({
       )}
 
       {/* 5. ATRIBUTOS TÁTICOS */}
-      <div className={`${small ? "px-1.5 pb-1.5 space-y-0.5" : "px-2 pb-2 space-y-1"} relative z-10`}>
+      <div className={`${isCompact ? "px-1 pb-1 space-y-0.5" : small ? "px-1.5 pb-1.5 space-y-0.5" : "px-2 pb-2 space-y-1"} relative z-10`}>
         {(attrsForPosition(card.position || "ATA") || []).map((k) => {
           const v = card.attrs?.[k] ?? 0;
           return (
             <div
               key={k}
-              className={`flex justify-between items-center ${small ? "px-1.5 py-0.5" : "px-2 py-0.5"} rounded ${
+              className={`flex justify-between items-center ${isCompact ? "px-1 py-0.5" : small ? "px-1.5 py-0.5" : "px-2 py-0.5"} rounded ${
                 highlightAttr === k
                   ? "bg-arcade-yellow text-arcade-dark shadow-[0_0_10px_var(--arcade-yellow)]"
                   : "bg-arcade-dark/10"
@@ -201,13 +208,13 @@ export function CardView({
             >
               <span
                 className={`font-arcade uppercase truncate ${
-                  small ? "text-[7.5px] tracking-tighter max-w-[100px]" : "text-[8px]"
+                  isCompact ? "text-[6px] xs:text-[6.5px] tracking-tightest max-w-[62px]" : small ? "text-[7.5px] tracking-tighter max-w-[100px]" : "text-[8px]"
                 }`}
                 title={ATTR_LABELS[k]}
               >
                 {ATTR_LABELS[k]}
               </span>
-              <span className={`font-display ${small ? "text-base" : "text-lg"} leading-none font-bold shrink-0 ml-1`}>
+              <span className={`font-display ${isCompact ? "text-xs xs:text-sm" : small ? "text-base" : "text-lg"} leading-none font-bold shrink-0 ml-0.5`}>
                 {v}
               </span>
             </div>
@@ -216,7 +223,7 @@ export function CardView({
       </div>
 
       {/* 6. FRASE DA CARTA */}
-      {!small && (
+      {!isSmallOrCompact && (
         <div className="px-2 pb-1 text-[9px] italic font-body text-arcade-dark/70 text-center relative z-10">
           "{card.quote}"
         </div>

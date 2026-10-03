@@ -49,194 +49,275 @@ export function DuelArena({
   const playerRoleInPenalty: "BATEDOR" | "GOLEIRO" =
     aiRoleInPenalty === "GOLEIRO" ? "BATEDOR" : "GOLEIRO";
 
-  return (
-    <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[220px_1fr_220px] items-start justify-items-center gap-4 md:gap-6 px-4 py-2">
-      {/* AI side (Left) */}
-      <div className="flex flex-col items-center gap-2 w-full">
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="font-arcade text-[10px] text-arcade-red flex items-center gap-1">
-            <span>🤖</span>
-            <span>ADVERSÁRIO (IA)</span>
+  const actionAreaJSX = (
+    <div className="w-full max-w-md flex flex-col items-center justify-center gap-2 sm:gap-3">
+      {state.phase === "PAR_OU_IMPAR" && (
+        <CaraOuCoroa onDone={(winner) => dispatch({ type: "PAR_DONE", winner })} />
+      )}
+
+      {state.phase === "SELECT_CARD" && (
+        <div className="bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-900/95 text-arcade-cream border-2 border-arcade-yellow/60 rounded-xl p-3 sm:p-4 shadow-2xl backdrop-blur-md text-center animate-in fade-in w-full max-w-sm">
+          <div className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow mb-1 flex items-center justify-center gap-1.5">
+            <span>⚽</span>
+            <span>ESCOLHA UMA CARTA DA MÃO</span>
           </div>
-          <span className="font-arcade text-[8px] px-1.5 py-0.5 bg-red-950/80 text-red-300 border border-red-700/60 rounded">
-            {state.playerLevel <= 5
-              ? "MODO TREINO (LV. 1-5)"
-              : state.playerLevel <= 15
-                ? `TÁTICA ADAPTATIVA (LV. ${state.playerLevel})`
-                : state.playerLevel <= 25
-                  ? `PREDIÇÃO AVANÇADA (LV. ${state.playerLevel})`
-                  : `🔥 MODO MESTRE (LV. ${state.playerLevel})`}
-          </span>
+          <div className="font-body text-[11px] sm:text-xs text-arcade-cream/80 leading-snug">
+            Toque em um dos seus craques escalados abaixo para colocar em campo.
+          </div>
+          <div className="font-arcade text-[7.5px] sm:text-[8.5px] text-arcade-yellow/80 mt-1.5 sm:mt-2.5 bg-black/50 border border-arcade-yellow/20 rounded-md py-0.5 sm:py-1 px-2 sm:px-2.5 inline-block">
+            {state.chooser === "P"
+              ? "⭐ Você escolhe o atributo deste lance"
+              : "🤖 A IA vai escolher o atributo deste lance"}
+          </div>
         </div>
+      )}
 
-        {state.aiSpeech && (
-          <div className="w-full max-w-[220px] bg-arcade-dark/95 border-2 border-arcade-red text-arcade-cream rounded px-2.5 py-1.5 shadow-arcade text-center relative animate-fade-in">
-            <div className="font-arcade text-[8px] text-arcade-red/90 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-1">
-              <span>💬</span>
-              <span>IA PROVOCADORA</span>
-            </div>
-            <div className="font-body text-[11px] leading-tight text-arcade-cream font-medium">
-              "{state.aiSpeech}"
-            </div>
+      {state.phase === "TRAP_ANNOUNCE" && state.trapAnnounceFor && (
+        <TrapAnnouncePanel
+          by={state.trapAnnounceFor}
+          trap={state.trapAnnounceFor === "P" ? state.pTrapPlayed! : state.aiTrapPlayed!}
+          onContinue={onContinue}
+        />
+      )}
+
+      {state.phase === "PICK_ATTR" && (
+        <AttributeChoice
+          position={pos}
+          chooser={state.chooser}
+          onPick={(a) => dispatch({ type: "PICK_ATTR", attr: a })}
+        />
+      )}
+
+      {state.phase === "ANNOUNCE_ATTR" && state.chosenAttr && pCard && aiCard && (
+        <AnnounceAttrPanel
+          attr={state.chosenAttr}
+          chooser={state.chooser}
+          activeTrap={activeTrap}
+          activeTrapBy={state.pTrapPlayed ? "P" : state.aiTrapPlayed ? "AI" : null}
+          canReact={canPlayerReactTrap}
+          playerTraps={playablePlayerTraps}
+          onPlayTrap={(t) => dispatch({ type: "PLAY_TRAP_P", trap: t })}
+          onContinue={onContinue}
+        />
+      )}
+
+      {state.phase === "REVEAL" && state.chosenAttr && state.pendingResolve && (
+        <div className="text-center bg-arcade-dark/90 border-2 border-arcade-yellow rounded-xl px-3 py-2 sm:px-4 sm:py-3 w-full shadow-2xl backdrop-blur-md">
+          <div className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow mb-0.5">
+            {state.chooser === "P" ? "VOCÊ ESCOLHEU" : "IA ESCOLHEU"}{" "}
+            {ATTR_LABELS[state.chosenAttr]}
           </div>
-        )}
-
-        <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-red-500/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
-          <div className="absolute -inset-1 bg-red-600/10 rounded-2xl blur-lg pointer-events-none" />
-          <CardView
-            card={aiCard}
-            faceDown={aiFaceDown || !aiCard}
-            highlightAttr={state.chosenAttr}
-            dim={state.phase === "PENALTY"}
-          />
-        </div>
-        <TrapSlot side="AI" hand={state.aiTraps} played={state.aiTrapPlayed} />
-      </div>
-
-      {/* Center action area */}
-      <div className="min-w-[260px] max-w-md flex flex-col items-center justify-center gap-3">
-        {state.phase === "PAR_OU_IMPAR" && (
-          <CaraOuCoroa onDone={(winner) => dispatch({ type: "PAR_DONE", winner })} />
-        )}
-
-        {state.phase === "SELECT_CARD" && (
-          <div className="bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-900/95 text-arcade-cream border-2 border-arcade-yellow/60 rounded-xl p-4 shadow-2xl backdrop-blur-md text-center animate-in fade-in max-w-sm">
-            <div className="font-arcade text-[10px] text-arcade-yellow mb-1.5 flex items-center justify-center gap-1.5">
-              <span>⚽</span>
-              <span>ESCOLHA UMA CARTA DA MÃO</span>
+          {activeTrap && (
+            <div className="font-arcade text-[8px] sm:text-[9px] text-arcade-yellow bg-arcade-red/60 border border-arcade-yellow px-1.5 py-0.5 mb-1.5 rounded">
+              TRAP ATIVA: {TRAP_LABELS[activeTrap]}
             </div>
-            <div className="font-body text-xs text-arcade-cream/80 leading-snug">
-              Toque em um dos seus craques escalados abaixo para colocar em campo.
-            </div>
-            <div className="font-arcade text-[8.5px] text-arcade-yellow/80 mt-2.5 bg-black/50 border border-arcade-yellow/20 rounded-md py-1 px-2.5 inline-block">
-              {state.chooser === "P"
-                ? "⭐ Você escolhe o atributo deste lance"
-                : "🤖 A IA vai escolher o atributo deste lance"}
-            </div>
+          )}
+          <div className="font-display text-3xl sm:text-4xl text-arcade-cream leading-tight">
+            {state.pendingResolve.log.pValue} × {state.pendingResolve.log.aiValue}
           </div>
-        )}
-
-        {state.phase === "TRAP_ANNOUNCE" && state.trapAnnounceFor && (
-          <TrapAnnouncePanel
-            by={state.trapAnnounceFor}
-            trap={state.trapAnnounceFor === "P" ? state.pTrapPlayed! : state.aiTrapPlayed!}
-            onContinue={onContinue}
-          />
-        )}
-
-        {state.phase === "PICK_ATTR" && (
-          <AttributeChoice
-            position={pos}
-            chooser={state.chooser}
-            onPick={(a) => dispatch({ type: "PICK_ATTR", attr: a })}
-          />
-        )}
-
-        {state.phase === "ANNOUNCE_ATTR" && state.chosenAttr && pCard && aiCard && (
-          <AnnounceAttrPanel
-            attr={state.chosenAttr}
-            chooser={state.chooser}
-            activeTrap={activeTrap}
-            activeTrapBy={state.pTrapPlayed ? "P" : state.aiTrapPlayed ? "AI" : null}
-            canReact={canPlayerReactTrap}
-            playerTraps={playablePlayerTraps}
-            onPlayTrap={(t) => dispatch({ type: "PLAY_TRAP_P", trap: t })}
-            onContinue={onContinue}
-          />
-        )}
-
-        {state.phase === "REVEAL" && state.chosenAttr && state.pendingResolve && (
-          <div className="text-center bg-arcade-dark/80 border-2 border-arcade-yellow rounded-md px-4 py-3 w-full">
-            <div className="font-arcade text-[10px] text-arcade-yellow mb-1">
-              {state.chooser === "P" ? "VOCÊ ESCOLHEU" : "IA ESCOLHEU"}{" "}
-              {ATTR_LABELS[state.chosenAttr]}
-            </div>
-            {activeTrap && (
-              <div className="font-arcade text-[9px] text-arcade-yellow bg-arcade-red/60 border border-arcade-yellow px-2 py-1 mb-2">
-                TRAP ATIVA: {TRAP_LABELS[activeTrap]}
-              </div>
-            )}
-            <div className="font-display text-4xl text-arcade-cream">
-              {state.pendingResolve.log.pValue} × {state.pendingResolve.log.aiValue}
-            </div>
-            <div className="font-arcade text-[10px] text-arcade-yellow mt-1">VOCÊ × IA</div>
-            <ResultLabel winner={state.pendingResolve.log.winner} />
-            {state.pendingResolve.log.trapEffect && (
-              <div className="mt-2 font-body text-[11px] text-arcade-cream bg-arcade-dark/60 border border-arcade-yellow px-2 py-1">
-                {state.pendingResolve.log.trapEffect}
-              </div>
-            )}
-            <ContinueButton phase={state.phase} onClick={onContinue} />
-          </div>
-        )}
-
-        {state.phase === "PENALTY" && (
-          <PenaltyMinigame
-            role={playerRoleInPenalty}
-            aiChoice={() =>
-              aiPenaltyChoice(
-                state.difficulty,
-                state.playerLastPenaltyDir,
-                aiRoleInPenalty,
-              )
-            }
-            onDone={onPenaltyDone}
-          />
-        )}
-
-        {state.phase === "PENALTY_RESULT" && state.pendingResolve && (
-          <div className="text-center bg-arcade-dark/80 border-2 border-arcade-yellow rounded-md px-4 py-3 w-full">
-            <div className="font-arcade text-[10px] text-arcade-yellow mb-1">
-              RESULTADO DO PÊNALTI
-            </div>
-            <div className="font-display text-3xl text-arcade-cream">
-              {state.pendingResolve.log.penalty?.result}
-            </div>
-            <div className="font-body text-[11px] text-arcade-cream mt-2 bg-arcade-dark/60 border border-arcade-yellow px-2 py-1">
+          <div className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow mt-0.5">VOCÊ × IA</div>
+          <ResultLabel winner={state.pendingResolve.log.winner} />
+          {state.pendingResolve.log.trapEffect && (
+            <div className="mt-1.5 font-body text-[10px] sm:text-[11px] text-arcade-cream bg-arcade-dark/70 border border-arcade-yellow/60 px-2 py-0.5 rounded">
               {state.pendingResolve.log.trapEffect}
             </div>
-            <ResultLabel winner={state.pendingResolve.log.winner} />
-            <ContinueButton phase={state.phase} onClick={onContinue} />
+          )}
+          <ContinueButton phase={state.phase} onClick={onContinue} />
+        </div>
+      )}
+
+      {state.phase === "PENALTY" && (
+        <PenaltyMinigame
+          role={playerRoleInPenalty}
+          aiChoice={() =>
+            aiPenaltyChoice(
+              state.difficulty,
+              state.playerLastPenaltyDir,
+              aiRoleInPenalty,
+            )
+          }
+          onDone={onPenaltyDone}
+        />
+      )}
+
+      {state.phase === "PENALTY_RESULT" && state.pendingResolve && (
+        <div className="text-center bg-arcade-dark/90 border-2 border-arcade-yellow rounded-xl px-3 py-2 sm:px-4 sm:py-3 w-full shadow-2xl backdrop-blur-md">
+          <div className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow mb-0.5">
+            RESULTADO DO PÊNALTI
+          </div>
+          <div className="font-display text-2xl sm:text-3xl text-arcade-cream">
+            {state.pendingResolve.log.penalty?.result}
+          </div>
+          <div className="font-body text-[10px] sm:text-[11px] text-arcade-cream mt-1.5 bg-arcade-dark/70 border border-arcade-yellow/60 px-2 py-0.5 rounded">
+            {state.pendingResolve.log.trapEffect}
+          </div>
+          <ResultLabel winner={state.pendingResolve.log.winner} />
+          <ContinueButton phase={state.phase} onClick={onContinue} />
+        </div>
+      )}
+
+      {state.phase === "POS_END" && (
+        <PosEndPanel
+          pScore={state.posScore.p}
+          aiScore={state.posScore.ai}
+          reward={state.lastReward}
+          onContinue={onContinue}
+          isLast={state.posIdx >= 10}
+        />
+      )}
+    </div>
+  );
+
+  return (
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 py-1">
+      {/* ── LAYOUT MOBILE (< md): CONFRONTO LADO A LADO E AÇÃO CENTRAL COMPACTA ── */}
+      <div className="flex md:hidden flex-col items-center gap-2 w-full">
+        {/* Provocação da IA se houver */}
+        {state.aiSpeech && (
+          <div className="w-full max-w-[320px] bg-arcade-dark/95 border border-arcade-red text-arcade-cream rounded-lg px-2 py-1 shadow-md text-center animate-fade-in">
+            <span className="font-body text-[10px] leading-tight text-arcade-cream font-medium">
+              🤖 "{state.aiSpeech}"
+            </span>
           </div>
         )}
 
-        {state.phase === "POS_END" && (
-          <PosEndPanel
-            pScore={state.posScore.p}
-            aiScore={state.posScore.ai}
-            reward={state.lastReward}
-            onContinue={onContinue}
-            isLast={state.posIdx >= 10}
-          />
-        )}
+        {/* Linha de Duelo: IA (Esquerda) vs VOCÊ (Direita) */}
+        <div className="w-full flex items-center justify-between gap-2 max-w-[370px]">
+          {/* Card IA */}
+          <div className="flex flex-col items-center flex-1 min-w-0">
+            <div className="font-arcade text-[8px] text-arcade-red flex items-center gap-0.5 mb-1 truncate">
+              <span>🤖</span>
+              <span>IA</span>
+            </div>
+            <div className="p-1 rounded-xl bg-black/60 border border-red-500/50 shadow-lg">
+              <CardView
+                card={aiCard}
+                faceDown={aiFaceDown || !aiCard}
+                highlightAttr={state.chosenAttr}
+                dim={state.phase === "PENALTY"}
+                compact
+              />
+            </div>
+            <div className="mt-1">
+              <TrapSlot side="AI" hand={state.aiTraps} played={state.aiTrapPlayed} />
+            </div>
+          </div>
+
+          {/* Divisor VS */}
+          <div className="flex flex-col items-center justify-center shrink-0 px-0.5">
+            <span className="font-arcade text-[11px] text-arcade-yellow font-black animate-pulse drop-shadow">
+              VS
+            </span>
+          </div>
+
+          {/* Card Jogador */}
+          <div className="flex flex-col items-center flex-1 min-w-0">
+            <div className="font-arcade text-[8px] text-arcade-yellow flex items-center gap-0.5 mb-1 truncate">
+              <span>⭐</span>
+              <span>VOCÊ</span>
+            </div>
+            <div className="p-1 rounded-xl bg-black/60 border border-arcade-yellow/50 shadow-lg">
+              <CardView
+                card={pCard}
+                faceDown={!pCard}
+                highlightAttr={state.chosenAttr}
+                dim={state.phase === "PENALTY"}
+                compact
+              />
+            </div>
+            <div className="mt-1">
+              <TrapSlot
+                side="P"
+                hand={state.pTraps}
+                played={state.pTrapPlayed}
+                onOpenTutorial={onOpenTrapsTutorial}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Área de Ação e Interação Mobile */}
+        <div className="w-full flex justify-center">
+          {actionAreaJSX}
+        </div>
       </div>
 
-      {/* Player side (Right) */}
-      <div className="flex flex-col items-center gap-2 w-full">
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="font-arcade text-[10px] text-arcade-yellow flex items-center gap-1">
-            <span>⭐</span>
-            <span>SUA CARTA (VOCÊ)</span>
+      {/* ── LAYOUT DESKTOP (>= md): 3 COLUNAS CLÁSSICAS ── */}
+      <div className="hidden md:grid grid-cols-[220px_1fr_220px] items-start justify-items-center gap-6">
+        {/* IA lado esquerdo */}
+        <div className="flex flex-col items-center gap-2 w-full">
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="font-arcade text-[10px] text-arcade-red flex items-center gap-1">
+              <span>🤖</span>
+              <span>ADVERSÁRIO (IA)</span>
+            </div>
+            <span className="font-arcade text-[8px] px-1.5 py-0.5 bg-red-950/80 text-red-300 border border-red-700/60 rounded">
+              {state.playerLevel <= 5
+                ? "MODO TREINO (LV. 1-5)"
+                : state.playerLevel <= 15
+                  ? `TÁTICA ADAPTATIVA (LV. ${state.playerLevel})`
+                  : state.playerLevel <= 25
+                    ? `PREDIÇÃO AVANÇADA (LV. ${state.playerLevel})`
+                    : `🔥 MODO MESTRE (LV. ${state.playerLevel})`}
+            </span>
           </div>
-          <span className="font-arcade text-[8px] px-1.5 py-0.5 bg-yellow-950/80 text-arcade-yellow border border-yellow-700/60 rounded">
-            SEU NÍVEL: {state.playerLevel}
-          </span>
+
+          {state.aiSpeech && (
+            <div className="w-full max-w-[220px] bg-arcade-dark/95 border-2 border-arcade-red text-arcade-cream rounded px-2.5 py-1.5 shadow-arcade text-center relative animate-fade-in">
+              <div className="font-arcade text-[8px] text-arcade-red/90 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-1">
+                <span>💬</span>
+                <span>IA PROVOCADORA</span>
+              </div>
+              <div className="font-body text-[11px] leading-tight text-arcade-cream font-medium">
+                "{state.aiSpeech}"
+              </div>
+            </div>
+          )}
+
+          <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-red-500/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
+            <div className="absolute -inset-1 bg-red-600/10 rounded-2xl blur-lg pointer-events-none" />
+            <CardView
+              card={aiCard}
+              faceDown={aiFaceDown || !aiCard}
+              highlightAttr={state.chosenAttr}
+              dim={state.phase === "PENALTY"}
+            />
+          </div>
+          <TrapSlot side="AI" hand={state.aiTraps} played={state.aiTrapPlayed} />
         </div>
-        <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-arcade-yellow/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
-          <div className="absolute -inset-1 bg-arcade-yellow/15 rounded-2xl blur-lg pointer-events-none" />
-          <CardView
-            card={pCard}
-            faceDown={!pCard}
-            highlightAttr={state.chosenAttr}
-            dim={state.phase === "PENALTY"}
+
+        {/* Centro de Ação Desktop */}
+        <div className="min-w-[260px] max-w-md flex flex-col items-center justify-center gap-3">
+          {actionAreaJSX}
+        </div>
+
+        {/* Jogador lado direito */}
+        <div className="flex flex-col items-center gap-2 w-full">
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="font-arcade text-[10px] text-arcade-yellow flex items-center gap-1">
+              <span>⭐</span>
+              <span>SUA CARTA (VOCÊ)</span>
+            </div>
+            <span className="font-arcade text-[8px] px-1.5 py-0.5 bg-yellow-950/80 text-arcade-yellow border border-yellow-700/60 rounded">
+              SEU NÍVEL: {state.playerLevel}
+            </span>
+          </div>
+          <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-arcade-yellow/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
+            <div className="absolute -inset-1 bg-arcade-yellow/15 rounded-2xl blur-lg pointer-events-none" />
+            <CardView
+              card={pCard}
+              faceDown={!pCard}
+              highlightAttr={state.chosenAttr}
+              dim={state.phase === "PENALTY"}
+            />
+          </div>
+          <TrapSlot
+            side="P"
+            hand={state.pTraps}
+            played={state.pTrapPlayed}
+            onOpenTutorial={onOpenTrapsTutorial}
           />
         </div>
-        <TrapSlot
-          side="P"
-          hand={state.pTraps}
-          played={state.pTrapPlayed}
-          onOpenTutorial={onOpenTrapsTutorial}
-        />
       </div>
     </div>
   );
