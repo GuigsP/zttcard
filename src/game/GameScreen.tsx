@@ -26,6 +26,7 @@ import { sound } from "./audio";
 
 import { MobileNavDock, type LobbyScreen } from "./components/MobileNavDock";
 import { RetroBoombox } from "./components/RetroBoombox";
+import { LandscapeNotice } from "./components/LandscapeNotice";
 import { getPlayerLevel } from "./playerLevel";
 
 type Screen = "start" | "playing" | "end" | "matchmaking" | "album" | "shop" | "trades" | "carteira";
@@ -201,6 +202,9 @@ export function GameScreen() {
 
       {/* RADINHO RETRÔ / WALKMAN ESPORTIVO FLUTUANTE (EM TODAS AS TELAS E NA BATALHA) */}
       <RetroBoombox floating currentScreen={screen} />
+
+      {/* DICA DE ORIENTAÇÃO: VIRE O CELULAR NA HORIZONTAL PARA A MELHOR EXPERIÊNCIA */}
+      <LandscapeNotice />
     </>
   );
 }
@@ -256,15 +260,19 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
   const arenaBg = playerLevel.arenaImage;
 
   return (
-    <div className="min-h-screen bg-[#070e1b] text-arcade-cream flex flex-col justify-between relative selection:bg-arcade-yellow selection:text-arcade-dark overflow-x-hidden">
-      {/* CAMADA DE FUNDO: ARENA DO NÍVEL ATUAL (Ex: QUINTAL DE CASA) */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] bg-[#070e1b] text-arcade-cream flex flex-col justify-between relative selection:bg-arcade-yellow selection:text-arcade-dark overflow-x-hidden">
+      {/* CAMADA DE FUNDO ESTÁTICA FIXA: IMAGEM TRAVADA NÃO MEXE AO ROLAR NO MOBILE */}
+      <div className="fixed inset-0 w-screen h-[100dvh] pointer-events-none z-0 overflow-hidden select-none will-change-transform transform-gpu">
         {arenaBg ? (
           <>
             <img
               src={arenaBg}
               alt={playerLevel.title}
-              className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.85] contrast-[1.05]"
+              className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.85] contrast-[1.05] will-change-transform"
+              style={{
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
             />
             {/* Vinheta arcade suave para a arte aparecer nítida e as cartas contrastarem */}
             <div className="absolute inset-0 bg-black/25" />
