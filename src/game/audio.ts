@@ -950,7 +950,7 @@ class SoundManager {
     this.syncCurrentStationTimeline();
     this.saveStationTimelines();
     this.radioPlaying = false;
-    this.playSessionId++; // Invalida callbacks de reprodução assíncronos anteriores
+    this.playSessionId++; // Invalida qualquer promessa ou callback assíncrono
 
     if (this.radioAudioElement) {
       try {
@@ -996,9 +996,10 @@ class SoundManager {
     if (this.radioAudioElement) {
       try {
         this.radioAudioElement.pause();
-        this.radioAudioElement.currentTime = 0;
         this.radioAudioElement.onended = null;
         this.radioAudioElement.onerror = null;
+        this.radioAudioElement.ontimeupdate = null;
+        this.radioAudioElement.src = "";
       } catch {
         // ignore
       }
@@ -1238,6 +1239,14 @@ class SoundManager {
             timeline.trackDuration = audio.duration;
           }
         }
+      } else if (sessionId !== this.playSessionId) {
+        // Sessão expirou (trocou de rádio ou pausou) -> silencia e para imediatamente
+        try {
+          audio.pause();
+          audio.src = "";
+        } catch {
+          // ignore
+        }
       }
     };
 
@@ -1267,8 +1276,12 @@ class SoundManager {
       .then(() => {
         applySeek();
         if (sessionId !== this.playSessionId || !this.radioPlaying) {
-          audio.pause();
-          audio.currentTime = 0;
+          try {
+            audio.pause();
+            audio.src = "";
+          } catch {
+            // ignore
+          }
           if (this.radioAudioElement === audio) {
             this.radioAudioElement = null;
           }

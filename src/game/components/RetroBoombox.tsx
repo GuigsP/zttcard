@@ -142,8 +142,8 @@ export function RetroBoombox({
 
     return (
       <div className={`${positionClass} flex items-center select-none animate-in fade-in duration-200`}>
-        {/* Mobile (< sm): Botão circular ultra-compacto de 36px que NUNCA tapa o jogo */}
-        <div className="flex sm:hidden items-center gap-1 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full p-1 shadow-[0_4px_0_#18181b,0_8px_16px_rgba(0,0,0,0.6)]">
+        {/* Mobile (< sm): Barra retrô compacta com Play/Pause, Próxima Estação e Expandir */}
+        <div className="flex sm:hidden items-center gap-1 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full py-1 px-1.5 shadow-[0_4px_0_#18181b,0_8px_16px_rgba(0,0,0,0.6)]">
           <button
             type="button"
             onClick={handleTogglePlay}
@@ -156,11 +156,24 @@ export function RetroBoombox({
 
           <button
             type="button"
-            onClick={() => toggleExpanded(true)}
-            className="flex items-center gap-1 pr-1.5 pl-0.5 text-zinc-950 cursor-pointer active:scale-95"
-            title="Expandir Walkman"
-            aria-label="Expandir Walkman"
+            onClick={handleNextStation}
+            className="w-6 h-6 rounded-full bg-zinc-900/20 hover:bg-zinc-900/40 text-zinc-950 flex items-center justify-center text-[9px] font-bold active:scale-90 transition-transform cursor-pointer shrink-0"
+            title="Próxima estação de rádio"
+            aria-label="Próxima estação de rádio"
           >
+            ⏭
+          </button>
+
+          <button
+            type="button"
+            onClick={() => toggleExpanded(true)}
+            className="flex items-center gap-1 pr-1 pl-0.5 text-zinc-950 cursor-pointer active:scale-95"
+            title={`Estação: ${station.title}. Toque para abrir o Walkman`}
+            aria-label="Abrir Walkman"
+          >
+            <span className="font-arcade text-[7.5px] font-black text-[#172554] max-w-[70px] truncate leading-none">
+              {station.freq}
+            </span>
             <span className="font-arcade text-[8px] font-black leading-none">📻</span>
             {isPlaying && (
               <span className="flex h-1.5 w-1.5 relative">

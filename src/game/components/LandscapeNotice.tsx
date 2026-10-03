@@ -33,7 +33,7 @@ export function LandscapeNotice() {
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-arcade text-[8.5px] text-arcade-yellow font-black uppercase tracking-wider leading-none">
-              DICA RETRÔ ARCADE
+              DICA DO TREINADOR
             </span>
             <span className="font-body text-[11px] text-arcade-cream/90 leading-tight mt-0.5 truncate">
               Vire o celular na horizontal para a melhor experiência! 📱⚽
