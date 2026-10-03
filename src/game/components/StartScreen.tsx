@@ -644,13 +644,13 @@ export function StartScreen({
                     {/* Topo da Arena: Título + Nível do Treinador */}
                     <div className="flex items-center justify-between mb-3 relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{playerLevel.level === 1 ? "🏡" : "🏟️"}</span>
+                        <span className="text-2xl">{playerLevel.phase === 1 ? "🏡" : "🏟️"}</span>
                         <div>
                           <div className="font-arcade text-[8px] sm:text-[9px] text-emerald-400 tracking-widest uppercase">
                             {playerLevel.chapter} · {playerLevel.category}
                           </div>
                           <div className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight uppercase">
-                            {playerLevel.title}
+                            {playerLevel.stageBadge} — {playerLevel.title}
                           </div>
                         </div>
                       </div>
@@ -660,7 +660,7 @@ export function StartScreen({
                         <span className="text-sm">⭐</span>
                         <div className="text-right">
                           <div className="font-arcade text-[9px] text-arcade-yellow font-bold leading-none">
-                            NV. {playerLevel.level} / 30
+                            {playerLevel.stageBadge}
                           </div>
                           <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[95px] truncate">
                             {playerLevel.title}
@@ -693,14 +693,14 @@ export function StartScreen({
                       {/* Centro do Campo com Bola e Microcopy Raiz */}
                       <div className="relative z-10 flex flex-col items-center text-center py-1">
                         <div className="w-10 h-10 rounded-full bg-black/60 border-2 border-arcade-yellow flex items-center justify-center text-xl shadow-lg mb-1 animate-pulse">
-                          {playerLevel.level === 1 ? "🏡" : "⚽"}
+                          {playerLevel.phase === 1 ? "🏡" : "⚽"}
                         </div>
                         <div className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold drop-shadow tracking-wider uppercase">
-                          {playerLevel.title}
+                          {playerLevel.stageBadge} — {playerLevel.title}
                         </div>
                         <div className="font-body text-xs text-arcade-cream font-medium max-w-sm mt-0.5 drop-shadow">
                           {playMode === "solo"
-                            ? (playerLevel.level === 1
+                            ? (playerLevel.phase === 1
                                 ? "Partida no quintal entre chinelos Havaianas. Fature seu conto!"
                                 : "Enfrente a máquina no clássico e fature seu conto!")
                             : "Desafie um amigo ao vivo com código de sala e Traps!"}

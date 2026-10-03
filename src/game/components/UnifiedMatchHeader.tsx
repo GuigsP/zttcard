@@ -91,9 +91,9 @@ export function UnifiedMatchHeader({
         </div>
 
         {arenaTitle && (
-          <div className="hidden lg:flex items-center gap-1 font-arcade text-[8.5px] bg-arcade-blue/60 text-emerald-300 border border-emerald-400/50 px-2 py-1 rounded shadow-xs">
+          <div className="hidden md:flex items-center gap-1 font-arcade text-[8.5px] bg-arcade-blue/70 text-emerald-300 border border-emerald-400/50 px-2.5 py-1 rounded shadow-xs shrink-0">
             <span>📍</span>
-            <span className="truncate max-w-[140px] uppercase">{arenaTitle}</span>
+            <span className="uppercase">{arenaTitle}</span>
           </div>
         )}
 

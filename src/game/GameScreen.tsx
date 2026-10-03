@@ -301,7 +301,7 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
             phase={state.phase}
             chooser={state.chooser}
             difficulty={state.difficulty}
-            arenaTitle={playerLevel.title}
+            arenaTitle={playerLevel.fullTitle}
             onExit={onExit}
           />
         </div>
