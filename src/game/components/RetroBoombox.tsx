@@ -137,7 +137,7 @@ export function RetroBoombox({
   // 0. Versão Miniatura Flutuante (Gadget Retrô Recolhido)
   if (floating && !isExpanded) {
     const positionClass = inMatch
-      ? "fixed top-3 right-3 sm:top-[58px] sm:right-4 md:top-auto md:bottom-6 md:right-6 z-40"
+      ? "fixed bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 md:bottom-6 md:right-6 z-40"
       : "fixed bottom-[68px] sm:bottom-20 md:bottom-6 right-3 sm:right-6 z-40";
 
     return (
