@@ -257,18 +257,19 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
 
   return (
     <div className="min-h-screen bg-[#070e1b] text-arcade-cream flex flex-col justify-between relative selection:bg-arcade-yellow selection:text-arcade-dark overflow-x-hidden">
-      {/* CAMADA DE FUNDO: ARENA DO NÍVEL ATUAL (Ex: QUINTAL DE CASA NO NÍVEL 1) */}
+      {/* CAMADA DE FUNDO: ARENA DO NÍVEL ATUAL (Ex: QUINTAL DE CASA) */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         {arenaBg ? (
           <>
             <img
               src={arenaBg}
               alt={playerLevel.title}
-              className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.70] contrast-[1.12]"
+              className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.85] contrast-[1.05]"
             />
-            {/* Vinheta noturna sutil para os cards e o placar brilharem com contraste perfeito */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/85" />
-            <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.85)]" />
+            {/* Vinheta arcade suave para a arte aparecer nítida e as cartas contrastarem */}
+            <div className="absolute inset-0 bg-black/25" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-slate-950/60" />
+            <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.7)]" />
           </>
         ) : (
           <>

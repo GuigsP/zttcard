@@ -85,12 +85,28 @@ export function getCareerLevel(level: number): CareerLevel {
   return CAREER_LEVELS.find((c) => c.level === bounded) ?? CAREER_LEVELS[0];
 }
 
+/**
+ * Retorna a imagem oficial da arena do nível ou o cenário desbloqueado mais recente como fallback
+ */
+export function getArenaImageForLevel(level: number): string {
+  const bounded = Math.max(1, Math.min(30, level));
+  const exact = CAREER_LEVELS.find((c) => c.level === bounded);
+  if (exact?.arenaImage) return exact.arenaImage;
+
+  // Busca retroativa da arena mais próxima desbloqueada
+  for (let l = bounded; l >= 1; l--) {
+    const prev = CAREER_LEVELS.find((c) => c.level === l);
+    if (prev?.arenaImage) return prev.arenaImage;
+  }
+  return "/arenas/level-1-quintal-de-casa.jpg";
+}
+
 export type PlayerLevelInfo = {
   level: number;
   title: string;
   chapter: string;
   category: string;
-  arenaImage?: string;
+  arenaImage: string;
   xp: number;
   nextLevelXp: number;
   progressPercent: number;
@@ -137,7 +153,7 @@ export function getPlayerLevel(): PlayerLevelInfo {
     title: career.name,
     chapter: career.chapter,
     category: career.category,
-    arenaImage: career.arenaImage,
+    arenaImage: getArenaImageForLevel(level),
     xp: totalXp,
     nextLevelXp,
     progressPercent,
