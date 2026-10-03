@@ -252,23 +252,40 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
   };
 
   return (
-    <div className="min-h-screen bg-arcade-blue flex flex-col justify-between">
-      {trapsTutorial && <TrapsTutorialModal onClose={closeTrapsTutorial} />}
-      <EventToast text={state.toast?.text ?? null} color={state.toast?.color} />
+    <div className="min-h-screen bg-[#070e1b] text-arcade-cream flex flex-col justify-between relative selection:bg-arcade-yellow selection:text-arcade-dark overflow-x-hidden">
+      {/* CAMADA DE FUNDO: ESTÁDIO NOTURNO RETRÔ (ESTRUTURA PRONTA PARA A ILUSTRAÇÃO DO NANABANANA) */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        {/* Iluminação do Gramado Central */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_50%_35%,rgba(13,60,32,0.48),rgba(5,13,24,0.98))]" />
+        {/* Holofote Superior Esquerdo do Estádio */}
+        <div className="absolute -top-32 -left-32 w-[600px] h-[800px] bg-gradient-to-br from-arcade-yellow/15 via-emerald-400/8 to-transparent blur-3xl transform -rotate-12" />
+        {/* Holofote Superior Direito do Estádio */}
+        <div className="absolute -top-32 -right-32 w-[600px] h-[800px] bg-gradient-to-bl from-cyan-400/12 via-emerald-500/8 to-transparent blur-3xl transform rotate-12" />
+        {/* Textura Retrô de Gramado */}
+        <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#ffd60a_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
+        {/* Vinheta Noturna nas Bordas */}
+        <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.92)]" />
+      </div>
 
-      <UnifiedMatchHeader
-        pGoals={state.goals.p}
-        aiGoals={state.goals.ai}
-        position={pos}
-        posScore={state.posScore}
-        roundIdx={state.roundIdx}
-        phase={state.phase}
-        chooser={state.chooser}
-        difficulty={state.difficulty}
-        onExit={onExit}
-      />
+      <div className="relative z-10 flex flex-col justify-between min-h-screen">
+        <div>
+          {trapsTutorial && <TrapsTutorialModal onClose={closeTrapsTutorial} />}
+          <EventToast text={state.toast?.text ?? null} color={state.toast?.color} />
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 py-2 px-4 w-full">
+          <UnifiedMatchHeader
+            pGoals={state.goals.p}
+            aiGoals={state.goals.ai}
+            position={pos}
+            posScore={state.posScore}
+            roundIdx={state.roundIdx}
+            phase={state.phase}
+            chooser={state.chooser}
+            difficulty={state.difficulty}
+            onExit={onExit}
+          />
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 py-2 px-4 w-full">
         <DuelArena
           state={state}
           pos={pos}
@@ -289,6 +306,7 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
           chosenAttr={state.chosenAttr}
           onSelectCard={selectCard}
         />
+      </div>
       </div>
     </div>
   );

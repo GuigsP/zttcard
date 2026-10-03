@@ -22,7 +22,7 @@ export function CardView({
   dim,
 }: Props) {
   const size = small
-    ? "w-[140px] h-[200px]"
+    ? "w-[154px] sm:w-[158px] h-[218px]"
     : "w-[200px] h-[290px]";
 
   if (faceDown || !card) {
@@ -187,20 +187,29 @@ export function CardView({
       )}
 
       {/* 5. ATRIBUTOS TÁTICOS */}
-      <div className="px-2 pb-2 space-y-1 relative z-10">
+      <div className={`${small ? "px-1.5 pb-1.5 space-y-0.5" : "px-2 pb-2 space-y-1"} relative z-10`}>
         {(attrsForPosition(card.position || "ATA") || []).map((k) => {
           const v = card.attrs?.[k] ?? 0;
           return (
             <div
               key={k}
-              className={`flex justify-between items-center px-2 py-0.5 rounded ${
+              className={`flex justify-between items-center ${small ? "px-1.5 py-0.5" : "px-2 py-0.5"} rounded ${
                 highlightAttr === k
                   ? "bg-arcade-yellow text-arcade-dark shadow-[0_0_10px_var(--arcade-yellow)]"
                   : "bg-arcade-dark/10"
               }`}
             >
-              <span className="font-arcade text-[8px]">{ATTR_LABELS[k]}</span>
-              <span className="font-display text-lg leading-none">{v}</span>
+              <span
+                className={`font-arcade uppercase truncate ${
+                  small ? "text-[7.5px] tracking-tighter max-w-[100px]" : "text-[8px]"
+                }`}
+                title={ATTR_LABELS[k]}
+              >
+                {ATTR_LABELS[k]}
+              </span>
+              <span className={`font-display ${small ? "text-base" : "text-lg"} leading-none font-bold shrink-0 ml-1`}>
+                {v}
+              </span>
             </div>
           );
         })}

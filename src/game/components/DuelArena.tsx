@@ -81,12 +81,15 @@ export function DuelArena({
           </div>
         )}
 
-        <CardView
-          card={aiCard}
-          faceDown={aiFaceDown || !aiCard}
-          highlightAttr={state.chosenAttr}
-          dim={state.phase === "PENALTY"}
-        />
+        <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-red-500/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
+          <div className="absolute -inset-1 bg-red-600/10 rounded-2xl blur-lg pointer-events-none" />
+          <CardView
+            card={aiCard}
+            faceDown={aiFaceDown || !aiCard}
+            highlightAttr={state.chosenAttr}
+            dim={state.phase === "PENALTY"}
+          />
+        </div>
         <TrapSlot side="AI" hand={state.aiTraps} played={state.aiTrapPlayed} />
       </div>
 
@@ -97,17 +100,18 @@ export function DuelArena({
         )}
 
         {state.phase === "SELECT_CARD" && (
-          <div className="bg-arcade-cream text-arcade-dark border-4 border-arcade-dark rounded-md p-3 shadow-arcade text-center">
-            <div className="font-arcade text-[10px] text-arcade-red mb-2">
-              ESCOLHA UMA CARTA DA MÃO
+          <div className="bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-900/95 text-arcade-cream border-2 border-arcade-yellow/60 rounded-xl p-4 shadow-2xl backdrop-blur-md text-center animate-in fade-in max-w-sm">
+            <div className="font-arcade text-[10px] text-arcade-yellow mb-1.5 flex items-center justify-center gap-1.5">
+              <span>⚽</span>
+              <span>ESCOLHA UMA CARTA DA MÃO</span>
             </div>
-            <div className="font-body text-xs">
-              Toque em uma das suas cartas abaixo para colocar em campo.
+            <div className="font-body text-xs text-arcade-cream/80 leading-snug">
+              Toque em um dos seus craques escalados abaixo para colocar em campo.
             </div>
-            <div className="font-arcade text-[9px] text-arcade-dark/70 mt-2">
+            <div className="font-arcade text-[8.5px] text-arcade-yellow/80 mt-2.5 bg-black/50 border border-arcade-yellow/20 rounded-md py-1 px-2.5 inline-block">
               {state.chooser === "P"
-                ? "Você vai escolher o atributo"
-                : "A IA vai escolher o atributo"}
+                ? "⭐ Você escolhe o atributo deste lance"
+                : "🤖 A IA vai escolher o atributo deste lance"}
             </div>
           </div>
         )}
@@ -218,12 +222,15 @@ export function DuelArena({
             SEU NÍVEL: {state.playerLevel}
           </span>
         </div>
-        <CardView
-          card={pCard}
-          faceDown={!pCard}
-          highlightAttr={state.chosenAttr}
-          dim={state.phase === "PENALTY"}
-        />
+        <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-arcade-yellow/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
+          <div className="absolute -inset-1 bg-arcade-yellow/15 rounded-2xl blur-lg pointer-events-none" />
+          <CardView
+            card={pCard}
+            faceDown={!pCard}
+            highlightAttr={state.chosenAttr}
+            dim={state.phase === "PENALTY"}
+          />
+        </div>
         <TrapSlot
           side="P"
           hand={state.pTraps}

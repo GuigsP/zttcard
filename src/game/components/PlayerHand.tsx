@@ -23,17 +23,19 @@ export function PlayerHand({
   onSelectCard,
 }: Props) {
   return (
-    <div className="w-full max-w-4xl mx-auto mt-2 bg-arcade-dark/60 border-2 border-arcade-yellow/40 p-3 rounded-md shadow-arcade">
-      <div className="font-arcade text-[10px] text-arcade-cream text-center mb-2 flex items-center justify-center gap-2">
+    <div className="w-full max-w-4xl mx-auto mt-2 bg-gradient-to-b from-slate-900/90 via-slate-950/95 to-slate-900/90 border-2 border-arcade-yellow/50 p-3 sm:p-4 rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden">
+      {/* Luz ambiente na bandeja de cartas */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-70" />
+      <div className="font-arcade text-[10px] sm:text-xs text-arcade-cream text-center mb-3 flex items-center justify-center gap-2 relative z-10">
         <span>🃏</span>
-        <span>SUA MÃO — {POSITION_LABELS[pos]}</span>
+        <span className="text-arcade-yellow font-bold uppercase tracking-wider">SUA MÃO — {POSITION_LABELS[pos]}</span>
         {phase === "SELECT_CARD" && (
-          <span className="text-arcade-yellow bg-arcade-dark px-2 py-0.5 border border-arcade-yellow text-[9px] animate-pulse">
-            CLIQUE EM UMA CARTA PARA JOGAR
+          <span className="text-arcade-dark bg-arcade-yellow px-2.5 py-0.5 rounded font-black text-[9px] shadow-[0_0_8px_rgba(255,214,10,0.8)] animate-pulse">
+            ESCOLHA SEU CRAQUE
           </span>
         )}
       </div>
-      <div className="flex gap-4 justify-center items-center flex-wrap">
+      <div className="flex gap-3 sm:gap-5 justify-center items-center flex-wrap relative z-10">
         {pHand.map((c) => {
           const used = pUsedCardIds.includes(c.id);
           const isCurrent = pSelectedCardId === c.id;
