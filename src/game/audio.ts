@@ -632,35 +632,89 @@ class SoundManager {
 
   private officialStations = [
     {
-      id: "varzea",
-      freq: "94.0",
-      freqPercent: 28,
-      title: "VÁRZEA GROOVE",
-      genre: "Samba 16-bit",
-      folder: "94",
-      legacySrc: "/audio/menu-theme.mp3",
+      id: "petisco",
+      freq: "90.0",
+      freqPercent: 12,
+      title: "PETISCO NO PÃO",
+      genre: "Funk, Pop & Brasilidades",
+      folder: "90",
+      tracks: [
+        "1.mp3",
+        "001_90fm.mp3",
+        "002_90fm.mp3",
+        "003_90fm.mp3",
+        "004_90fm.mp3",
+        "005_90fm.mp3",
+      ],
+      legacySrc: "/audio/90/1.mp3",
       proceduralPattern: "samba",
       isPirate: false,
     },
     {
-      id: "campeoes",
-      freq: "98.5",
-      freqPercent: 50,
-      title: "ARENA 90s",
-      genre: "Arcade Match",
-      folder: "98.5",
-      legacySrc: "/audio/duel-theme.mp3",
+      id: "pennumbras",
+      freq: "94.0",
+      freqPercent: 32,
+      title: "ENTRE PENNUMBRAS",
+      genre: "Rock n' Roll",
+      folder: "94",
+      tracks: [
+        "001_94fm.mp3",
+        "002_94fm.mp3",
+        "003_94fm.mp3",
+        "004_94fm.mp3",
+        "005_94fm.mp3",
+        "006_94fm.mp3",
+      ],
+      legacySrc: "/audio/94/001_94fm.mp3",
       proceduralPattern: "arcade",
       isPirate: false,
     },
     {
-      id: "lendas",
-      freq: "104.2",
-      freqPercent: 78,
-      title: "CLÁSSICOS RETRÔ",
-      genre: "Retro Synth",
-      folder: "104.2",
-      legacySrc: "/audio/victory-theme.mp3",
+      id: "football-pro",
+      freq: "98.0",
+      freqPercent: 52,
+      title: "FOOTBALL PRO",
+      genre: "Eletrônica & House",
+      folder: "98",
+      tracks: [
+        "001_98fm.mp3",
+        "002_98fm.mp3",
+      ],
+      legacySrc: "/audio/98/001_98fm.mp3",
+      proceduralPattern: "synth",
+      isPirate: false,
+    },
+    {
+      id: "natureza-humana",
+      freq: "102.0",
+      freqPercent: 72,
+      title: "NATUREZA HUMANA",
+      genre: "World Music & Ritmos",
+      folder: "102",
+      tracks: [
+        "001_102fm.mp3",
+        "002_102fm.mp3",
+        "003_102fm.mp3",
+        "004_102fm.mp3",
+        "005_102fm.mp3",
+      ],
+      legacySrc: "/audio/102/001_102fm.mp3",
+      proceduralPattern: "samba",
+      isPirate: false,
+    },
+    {
+      id: "ztt-lofi",
+      freq: "106.0",
+      freqPercent: 92,
+      title: "RÁDIO ZTT",
+      genre: "Lo-Fi & Synthwave Relaxante",
+      folder: "106",
+      tracks: [
+        "001_106fm.mp3",
+        "002_106fm.mp3",
+        "003_106fm.mp3",
+      ],
+      legacySrc: "/audio/106/001_106fm.mp3",
       proceduralPattern: "synth",
       isPirate: false,
     },
@@ -674,7 +728,8 @@ class SoundManager {
       title: "PIRATA VOL. 1",
       genre: "Hits 80s 16-bit",
       folder: "k-7",
-      legacySrc: "/audio/pirate-hits-1.mp3",
+      tracks: ["1.mp3", "2.mp3", "3.mp3"],
+      legacySrc: "/audio/k-7/1.mp3",
       proceduralPattern: "arcade",
       isPirate: true,
     },
@@ -685,7 +740,8 @@ class SoundManager {
       title: "PIRATA VOL. 2",
       genre: "Sucessos 90s",
       folder: "k-7",
-      legacySrc: "/audio/pirate-hits-2.mp3",
+      tracks: ["2.mp3", "1.mp3"],
+      legacySrc: "/audio/k-7/2.mp3",
       proceduralPattern: "samba",
       isPirate: true,
     },
@@ -696,7 +752,8 @@ class SoundManager {
       title: "CAMELÔ 16-BIT",
       genre: "Clássicos VIP",
       folder: "k-7",
-      legacySrc: "/audio/pirate-hits-3.mp3",
+      tracks: ["3.mp3", "1.mp3"],
+      legacySrc: "/audio/k-7/3.mp3",
       proceduralPattern: "synth",
       isPirate: true,
     },
@@ -1017,16 +1074,27 @@ class SoundManager {
         let track = timeline.currentTrack;
         const dur = Math.max(30, timeline.trackDuration || 180);
 
+        const tracks = (currentStation as any).tracks as string[] | undefined;
+        const maxTracks = tracks && tracks.length > 0 ? tracks.length : 5;
+
         while (remaining >= dur) {
           remaining -= dur;
           track += 1;
-          if (track > 5) track = 1;
+          if (track > maxTracks) track = 1;
         }
 
         timeline.currentTrack = track;
         timeline.trackOffsetSeconds = remaining;
         timeline.lastSyncTimestamp = now;
       }
+    }
+
+    const currentStationObj = this.getRadioStation();
+    const currentTracks = (currentStationObj as any).tracks as string[] | undefined;
+    const maxCurrentTracks = currentTracks && currentTracks.length > 0 ? currentTracks.length : 5;
+    if (timeline.currentTrack > maxCurrentTracks || timeline.currentTrack < 1) {
+      timeline.currentTrack = 1;
+      timeline.trackOffsetSeconds = 0;
     }
 
     return timeline;
@@ -1047,6 +1115,41 @@ class SoundManager {
     this.saveStationTimelines();
   }
 
+  private getTrackSources(
+    station: (typeof this.officialStations)[0] | (typeof this.pirateStations)[0],
+    trackNum: number
+  ): string[] {
+    const list: string[] = [];
+    const tracks = (station as any).tracks as string[] | undefined;
+    if (tracks && tracks.length > 0) {
+      const idx = Math.max(0, (trackNum - 1) % tracks.length);
+      list.push(`/audio/${station.folder}/${tracks[idx]}`);
+    }
+    // Formato com 3 dígitos (ex: 001_94fm.mp3)
+    const pad3 = String(trackNum).padStart(3, "0");
+    list.push(`/audio/${station.folder}/${pad3}_${station.folder}fm.mp3`);
+    // Formato com 2 dígitos (ex: 01_94fm.mp3)
+    const pad2 = String(trackNum).padStart(2, "0");
+    list.push(`/audio/${station.folder}/${pad2}_${station.folder}fm.mp3`);
+    // Formato simples (ex: 1_94fm.mp3)
+    list.push(`/audio/${station.folder}/${trackNum}_${station.folder}fm.mp3`);
+    // Formato numérico simples (ex: 1.mp3)
+    list.push(`/audio/${station.folder}/${trackNum}.mp3`);
+
+    // Fallbacks para a primeira música da pasta
+    if (tracks && tracks.length > 0) {
+      list.push(`/audio/${station.folder}/${tracks[0]}`);
+    }
+    list.push(`/audio/${station.folder}/001_${station.folder}fm.mp3`);
+    list.push(`/audio/${station.folder}/1.mp3`);
+
+    if (station.legacySrc) {
+      list.push(station.legacySrc);
+    }
+
+    return Array.from(new Set(list));
+  }
+
   private startCurrentStation() {
     this.stopAudioAndProcedural();
     if (!this.radioPlaying) return;
@@ -1060,35 +1163,40 @@ class SoundManager {
       return;
     }
 
-    const folderTrackSrc = `/audio/${station.folder}/${timeline.currentTrack}.mp3`;
-    this.tryPlayAudioFile(folderTrackSrc, station, timeline.trackOffsetSeconds, () => {
-      if (timeline.currentTrack !== 1) {
-        timeline.currentTrack = 1;
-        timeline.trackOffsetSeconds = 0;
-        this.currentTrackNumber = 1;
-        const resetSrc = `/audio/${station.folder}/1.mp3`;
-        this.tryPlayAudioFile(resetSrc, station, 0, () => {
-          if (station.legacySrc) {
-            this.tryPlayAudioFile(station.legacySrc, station, 0, () => {
-              this.startProceduralBGM(station.proceduralPattern);
-            });
-          } else {
-            this.startProceduralBGM(station.proceduralPattern);
-          }
-        });
-      } else if (station.legacySrc) {
-        this.tryPlayAudioFile(station.legacySrc, station, timeline.trackOffsetSeconds, () => {
-          this.startProceduralBGM(station.proceduralPattern);
-        });
-      } else {
+    const sources = this.getTrackSources(station, timeline.currentTrack);
+    const tryPlayNextSource = (idx: number) => {
+      if (idx >= sources.length) {
         this.startProceduralBGM(station.proceduralPattern);
+        return;
       }
-    });
+      const src = sources[idx];
+      this.tryPlayAudioFile(src, station, timeline.trackOffsetSeconds, () => {
+        tryPlayNextSource(idx + 1);
+      });
+    };
+
+    tryPlayNextSource(0);
+  }
+
+  public nextRadioTrack(): void {
+    const station = this.getRadioStation();
+    const timeline = this.getOrUpdateStationTimeline(station.id);
+    const tracks = (station as any).tracks as string[] | undefined;
+    const maxTracks = tracks && tracks.length > 0 ? tracks.length : 5;
+    timeline.currentTrack = (timeline.currentTrack % maxTracks) + 1;
+    timeline.trackOffsetSeconds = 0;
+    timeline.lastSyncTimestamp = Date.now();
+    this.currentTrackNumber = timeline.currentTrack;
+    this.saveStationTimelines();
+    if (this.radioPlaying) {
+      this.startCurrentStation();
+    }
+    this.notifyRadioListeners();
   }
 
   private tryPlayAudioFile(
     src: string,
-    station: typeof this.officialStations[0],
+    station: (typeof this.officialStations)[0] | (typeof this.pirateStations)[0],
     initialOffset: number,
     onFail: () => void
   ) {
@@ -1137,7 +1245,9 @@ class SoundManager {
       if (sessionId === this.playSessionId && this.radioPlaying) {
         const timeline = this.stationTimelines[station.id];
         if (timeline) {
-          timeline.currentTrack += 1;
+          const tracks = (station as any).tracks as string[] | undefined;
+          const maxTracks = tracks && tracks.length > 0 ? tracks.length : 5;
+          timeline.currentTrack = (timeline.currentTrack % maxTracks) + 1;
           timeline.trackOffsetSeconds = 0;
           timeline.lastSyncTimestamp = Date.now();
           this.currentTrackNumber = timeline.currentTrack;

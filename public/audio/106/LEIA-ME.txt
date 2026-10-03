@@ -1,0 +1,15 @@
+===================================================================
+📻 106FM — RÁDIO ZTT
+===================================================================
+Estilo Musical: Lo-Fi Retrô / Synthwave Relaxante (Foco Tático & Organização de Baralho / Álbum)
+
+Coloque suas músicas (.mp3) aqui nomeadas como:
+1.mp3
+2.mp3
+3.mp3
+4.mp3
+5.mp3
+...
+
+O Walkman/Rádio toca as faixas em sequência contínua com sensação de rádio ao vivo!
+Se a pasta estiver vazia, o jogo usa a trilha procedural melódica relaxante.

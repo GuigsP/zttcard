@@ -70,8 +70,9 @@ export const DEFAULT_PACKS: DBPack[] = [
   { id: "copa-90", name: "Copa de 90", slug: "copa-90", description: "Pacote especial Copa de 1990", sort_order: 1, is_active: true, exclusive_to: null },
   { id: "copa-94", name: "Copa de 94", slug: "copa-94", description: "Pacote especial Copa de 1994", sort_order: 2, is_active: true, exclusive_to: null },
   { id: "copa-98", name: "Copa de 98", slug: "copa-98", description: "Pacote especial Copa de 1998", sort_order: 3, is_active: true, exclusive_to: null },
-  { id: "parque-sao-jorge-90", name: "Parque São Jorge - 90", slug: "parque-sao-jorge-90", description: "Esquadrão Campeão de 1990", sort_order: 4, is_active: true, exclusive_to: null },
-  { id: "587e1406-ea61-4bef-87f5-3d7a3fad5b96", name: "Os Leões", slug: "os-leoes", description: "XI do nosso 7o apoiador José Dinis Cardoso", sort_order: 5, is_active: false, exclusive_to: null },
+  { id: "150e5ef0-d84b-4d2e-8c81-0b514dcd7884", name: "Copa de 02", slug: "copa-02", description: "Pacote especial Copa de 2002", sort_order: 4, is_active: true, exclusive_to: null },
+  { id: "parque-sao-jorge-90", name: "Parque São Jorge - 90", slug: "parque-sao-jorge-90", description: "Esquadrão Campeão de 1990", sort_order: 5, is_active: true, exclusive_to: null },
+  { id: "587e1406-ea61-4bef-87f5-3d7a3fad5b96", name: "Os Leões", slug: "os-leoes", description: "XI do nosso 7o apoiador José Dinis Cardoso", sort_order: 6, is_active: false, exclusive_to: null },
 ];
 
 export function cardBelongsToPack(card: DBCard, packIdOrSlug: string, packs: DBPack[] = DEFAULT_PACKS): boolean {
@@ -107,6 +108,17 @@ export function cardBelongsToPack(card: DBCard, packIdOrSlug: string, packs: DBP
 
   // Regra garantida para o deck Tríplice Azul 03: cartas #244 a #265 pertencem a Tríplice Azul 03
   if (isTriplice(packIdOrSlug) && card.card_number >= 244 && card.card_number <= 265) {
+    return true;
+  }
+
+  const isCopa02 = (val: string) =>
+    val === "copa-02" ||
+    val === "150e5ef0-d84b-4d2e-8c81-0b514dcd7884" ||
+    val.includes("copa-02") ||
+    val.includes("copa 02");
+
+  // Regra garantida para o deck Copa 02: cartas #272 e #273 (Marcos e Rogério Ceni)
+  if (isCopa02(packIdOrSlug) && (card.card_number === 272 || card.card_number === 273)) {
     return true;
   }
 
@@ -270,6 +282,13 @@ export async function listAllCards(): Promise<DBCard[]> {
         currentPacks.push("f6f1aed2-2d24-4073-a03a-63b40e4e1d47");
       }
     }
+    // Garante que as cartas #272 e #273 de Copa 02 sempre tenham os IDs e slugs vinculados
+    if (c.card_number === 272 || c.card_number === 273) {
+      if (!currentPacks.includes("copa-02")) currentPacks.push("copa-02");
+      if (!currentPacks.includes("150e5ef0-d84b-4d2e-8c81-0b514dcd7884")) {
+        currentPacks.push("150e5ef0-d84b-4d2e-8c81-0b514dcd7884");
+      }
+    }
     return { ...c, name: (c.name || "").toUpperCase(), pack_ids: Array.from(new Set(currentPacks)) };
   });
   if (typeof window !== "undefined") {
@@ -345,13 +364,21 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
     }
 
     if (existingCardId) {
-      await supabase.from("cards").update(payload).eq("id", existingCardId);
+      const { error: updErr } = await supabase.from("cards").update(payload).eq("id", existingCardId);
+      if (updErr) {
+        console.error("Supabase cards update error:", updErr);
+        throw updErr;
+      }
       cardId = existingCardId;
     } else {
       const { data: maxRow } = await supabase.from("cards").select("card_number").order("card_number", { ascending: false }).limit(1).maybeSingle();
       payload.card_number = (maxRow?.card_number ?? 100) + 1;
       const { data, error } = await supabase.from("cards").insert(payload).select("id").single();
-      if (!error && data) cardId = data.id as string;
+      if (error) {
+        console.error("Supabase cards insert error:", error);
+        throw error;
+      }
+      if (data) cardId = data.id as string;
     }
 
     if (cardId) {
@@ -366,14 +393,22 @@ export async function upsertCard(input: UpsertCardInput): Promise<void> {
         }
       }
 
-      await supabase.from("card_packs").delete().eq("card_id", cardId);
+      const { error: delErr } = await supabase.from("card_packs").delete().eq("card_id", cardId);
+      if (delErr) {
+        console.warn("Supabase card_packs delete error:", delErr);
+      }
       if (packUuids.length > 0) {
         const rows = packUuids.map((pack_id) => ({ card_id: cardId!, pack_id }));
-        await supabase.from("card_packs").insert(rows);
+        const { error: insErr } = await supabase.from("card_packs").insert(rows);
+        if (insErr) {
+          console.error("Supabase card_packs insert error:", insErr);
+          throw insErr;
+        }
       }
     }
   } catch (err) {
-    console.warn("Supabase upsertCard error:", err);
+    console.error("Supabase upsertCard error:", err);
+    throw err;
   }
 
   // Always update local storage
@@ -778,10 +813,20 @@ export function getCachedCards(): DBCard[] {
   }
   return (cards || [])
     .filter((c): c is DBCard => Boolean(c && typeof c === "object"))
-    .map((c) => ({
-      ...c,
-      name: (c.name || "").toUpperCase(),
-    }));
+    .map((c) => {
+      let currentPacks = c.pack_ids ? [...c.pack_ids] : [];
+      if (c.card_number === 272 || c.card_number === 273) {
+        if (!currentPacks.includes("copa-02")) currentPacks.push("copa-02");
+        if (!currentPacks.includes("150e5ef0-d84b-4d2e-8c81-0b514dcd7884")) {
+          currentPacks.push("150e5ef0-d84b-4d2e-8c81-0b514dcd7884");
+        }
+      }
+      return {
+        ...c,
+        name: (c.name || "").toUpperCase(),
+        pack_ids: currentPacks,
+      };
+    });
 }
 
 export function checkIsCardExclusive(cardId: string): boolean {

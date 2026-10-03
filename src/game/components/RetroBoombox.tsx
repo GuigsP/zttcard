@@ -4,9 +4,17 @@ import { sound } from "../audio";
 interface RetroBoomboxProps {
   floating?: boolean;
   defaultExpanded?: boolean;
+  currentScreen?: string;
+  isInMatch?: boolean;
 }
 
-export function RetroBoombox({ floating = false, defaultExpanded = false }: RetroBoomboxProps = {}) {
+export function RetroBoombox({
+  floating = false,
+  defaultExpanded = false,
+  currentScreen,
+  isInMatch = false,
+}: RetroBoomboxProps = {}) {
+  const inMatch = isInMatch || currentScreen === "playing";
   const [isPlaying, setIsPlaying] = useState(sound.isRadioPlaying());
   const [station, setStation] = useState(sound.getRadioStation());
   const [isMuted, setIsMuted] = useState(sound.isMuted());
@@ -128,8 +136,12 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
 
   // 0. Versão Miniatura Flutuante (Gadget Retrô Recolhido)
   if (floating && !isExpanded) {
+    const positionClass = inMatch
+      ? "fixed top-[58px] right-2 sm:right-4 md:top-auto md:bottom-6 md:right-6 z-40"
+      : "fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-40";
+
     return (
-      <div className="fixed bottom-22 md:bottom-6 right-3 sm:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] select-none text-zinc-950 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className={`${positionClass} flex items-center gap-2 bg-gradient-to-r from-[#ffcc00] to-[#e6b800] border-2 border-zinc-950 rounded-full px-3 py-1.5 shadow-[0_4px_0_#18181b,0_10px_25px_rgba(0,0,0,0.6)] select-none text-zinc-950 animate-in fade-in slide-in-from-bottom-2 duration-200`}>
         <button
           type="button"
           onClick={handleTogglePlay}
@@ -149,8 +161,8 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
             <span className="font-arcade text-[6.5px] font-black tracking-wider text-zinc-900 leading-none">
               SPORTS 90
             </span>
-            <span className="font-arcade text-[8.5px] font-bold text-[#172554] leading-tight truncate max-w-[105px]">
-              {isTapeMode ? station.title : `${station.freq} MHz`}
+            <span className="font-arcade text-[8.5px] font-bold text-[#172554] leading-tight truncate max-w-[115px]">
+              {isTapeMode ? station.title : `${station.freq} ${station.title}`}
             </span>
           </div>
 
@@ -210,10 +222,11 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
             <button
               type="button"
               onClick={() => toggleExpanded(false)}
-              className="w-6 h-6 rounded-md bg-zinc-900/20 hover:bg-zinc-900/40 text-zinc-900 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
-              title="Minimizar Walkman"
+              className="flex items-center gap-1 bg-zinc-950 hover:bg-zinc-800 text-arcade-yellow border border-zinc-700 font-arcade text-[8px] font-bold px-2 py-1 rounded-md shadow active:scale-95 transition-all cursor-pointer"
+              title="Recolher rádio para pílula compacta"
             >
-              —
+              <span>▾</span>
+              <span>RECOLHER</span>
             </button>
           )}
         </div>
@@ -262,18 +275,22 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
         </div>
       </div>
 
-      {/* 3. VISOR LCD COMPACTO: Mostra apenas Faixa + Estação + Tempo */}
+      {/* 3. VISOR LCD COMPACTO: Mostra Faixa + Estação + Gênero + Tempo */}
       <div className="bg-[#0f172a] border-2 border-zinc-900 rounded-lg p-1.5 mb-2 shadow-inner text-arcade-cream">
         <div className="flex items-center justify-between font-arcade text-[8px]">
-          <div className="flex items-center gap-1.5 truncate max-w-[130px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-arcade-green animate-pulse" />
+          <div className="flex items-center gap-1.5 truncate max-w-[155px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-arcade-green animate-pulse shrink-0" />
             <span className="font-bold text-arcade-yellow truncate">
-              {isTapeMode ? `📼 ${station.title}` : `📻 ${station.freq} MHz`}
+              {isTapeMode ? `📼 ${station.title}` : `📻 ${station.freq} ${station.title}`}
             </span>
           </div>
-          <span className="text-arcade-green font-bold tabular-nums">
+          <span className="text-arcade-green font-bold tabular-nums text-[9px]">
             {formatSeconds(playbackTime.current)}
           </span>
+        </div>
+        <div className="flex items-center justify-between text-[7px] text-zinc-400 font-sans mt-0.5 px-0.5">
+          <span className="truncate text-zinc-300 font-medium">{station.genre}</span>
+          <span className="font-mono text-zinc-400 shrink-0 ml-1">FAIXA {trackNumber}</span>
         </div>
       </div>
 
@@ -338,13 +355,33 @@ export function RetroBoombox({ floating = false, defaultExpanded = false }: Retr
           <span>{isMuted ? "MUDO" : "SOM"}</span>
         </button>
       </div>
+
+      {/* Botão Inferior de Ação Rápida: Recolher para Pílula */}
+      {floating && (
+        <button
+          type="button"
+          onClick={() => toggleExpanded(false)}
+          className="w-full mt-2.5 py-1.5 bg-zinc-950/20 hover:bg-zinc-950/35 rounded-lg text-zinc-950 font-arcade text-[7.5px] font-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-zinc-950/30"
+          title="Minimizar rádio para o modo pílula"
+        >
+          <span>▾</span>
+          <span>RECOLHER PARA PÍLULA FLUTUANTE</span>
+        </button>
+      )}
     </div>
   );
 
   if (floating) {
     return (
-      <div className="fixed bottom-22 md:bottom-6 right-3 sm:right-6 z-50 w-72 sm:w-80 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_5px_0_#18181b] rounded-2xl animate-in zoom-in-95 duration-200">
-        {walkmanContent}
+      <div
+        className="fixed inset-0 z-40 md:inset-auto md:bottom-6 md:right-6 flex items-end sm:items-center md:items-start justify-center md:justify-end p-3 md:p-0 bg-black/65 md:bg-transparent backdrop-blur-xs md:backdrop-blur-none animate-in fade-in duration-200"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) toggleExpanded(false);
+        }}
+      >
+        <div className="w-full max-w-sm md:w-80 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_5px_0_#18181b] rounded-2xl animate-in zoom-in-95 slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-200">
+          {walkmanContent}
+        </div>
       </div>
     );
   }

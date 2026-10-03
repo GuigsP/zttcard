@@ -1,25 +1,48 @@
 ===================================================================
-📻 ZERO TO TOP (ZTT - CARD) — PASTA DE MÚSICAS DO JOGO
+📻 ZERO TO TOP (ZTT - CARD) — GUIA OFICIAL DE RÁDIOS & MÚSICAS
 ===================================================================
 
-Coloque seus arquivos de áudio (.mp3) nesta pasta com os seguintes nomes:
+As músicas do jogo ficam organizadas por pastas de estações FM dentro de:
+📂 public/audio/
 
 -------------------------------------------------------------------
-🎵 1. ESTAÇÕES OFICIAIS (Rádio ZTT):
+🎵 1. ESTAÇÕES OFICIAIS DE RÁDIO FM (90 ➔ 94 ➔ 98 ➔ 102 ➔ 106 MHz):
 -------------------------------------------------------------------
-- menu-theme.mp3    ➔ Música da Rádio FM 94.0 (Várzea Groove / Tema Principal)
-- duel-theme.mp3    ➔ Música da Rádio FM 98.5 (Arena 90s / Música de Duelo)
-- victory-theme.mp3 ➔ Música da Rádio FM 104.2 (Clássicos Retrô / Comemoração)
+📁 public/audio/90/   ➔ 90FM:  RÁDIO PETISCO NO PÃO
+                         (Funk Melody, Pop & Brasilidades Anos 90)
+
+📁 public/audio/94/   ➔ 94FM:  RÁDIO ENTRE PENNUMBRAS
+                         (Rock n' Roll Clássico, Grunge & Rock Nacional)
+
+📁 public/audio/98/   ➔ 98FM:  RÁDIO FOOTBALL PRO PERFORMANCE
+                         (Eletrônica, House & Eurodance)
+
+📁 public/audio/102/  ➔ 102FM: RÁDIO NATUREZA HUMANA
+                         (World Music & Ritmos de Várias Partes do Mundo)
+
+📁 public/audio/106/  ➔ 106FM: RÁDIO ZTT
+                         (Lo-Fi Retrô & Synthwave Relaxante / Foco Tático)
 
 -------------------------------------------------------------------
-🏴‍☠️ 2. ESTAÇÕES SECRETAS (Easter Egg - Rádio Pirata):
+💡 COMO ADICIONAR MÚSICAS:
 -------------------------------------------------------------------
-- pirate-hits-1.mp3 ➔ Música da FM 99.9 (Pirata Vol. 1 - Hits dos Anos 80)
-- pirate-hits-2.mp3 ➔ Música da FM 106.5 (Pirata Vol. 2 - Sucessos 90s)
-- pirate-hits-3.mp3 ➔ Música da FM 107.9 (Camelô 16-bit - Clássicos VIP)
+Dentro da pasta de cada rádio, basta colar seus arquivos .mp3 nomeados como:
+1.mp3
+2.mp3
+3.mp3
+4.mp3
+...
+
+O jogo toca as faixas em sequência contínua com linha do tempo independente,
+simulando a experiência autêntica de sintonizar uma rádio FM ao vivo!
+Se uma rádio não tiver arquivos .mp3, o jogo gera automaticamente uma
+trilha sonora procedural retrô 16-bit temática.
 
 -------------------------------------------------------------------
-💡 DICA:
-Se algum arquivo não for colocado, o jogo toca automaticamente
-a trilha sonora retrô em 16-bit gerada por código!
+🏴‍☠️ 2. ESTAÇÕES SECRETAS (FITA CASSETE / MIXTAPE K7):
+-------------------------------------------------------------------
+📁 public/audio/k-7/  ➔ Modo Mixtape Fita K7
+- pirate-hits-1.mp3
+- pirate-hits-2.mp3
+- pirate-hits-3.mp3
 ===================================================================

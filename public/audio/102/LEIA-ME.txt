@@ -1,0 +1,15 @@
+===================================================================
+📻 102FM — RÁDIO NATUREZA HUMANA
+===================================================================
+Estilo Musical: World Music, Sons Globais e Ritmos de Várias Partes do Mundo (Afrobeat, Cúmbia, Salsa, Reggae, Sons de Copas)
+
+Coloque suas músicas (.mp3) aqui nomeadas como:
+1.mp3
+2.mp3
+3.mp3
+4.mp3
+5.mp3
+...
+
+O Walkman/Rádio toca as faixas em sequência contínua com sensação de rádio ao vivo!
+Se a pasta estiver vazia, o jogo usa a trilha procedural rítmica.

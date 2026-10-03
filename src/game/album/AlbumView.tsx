@@ -5,7 +5,7 @@ import type { CatalogCard, CardRarity } from "../economy/economyTypes";
 import { RARITY_CONFIG } from "../economy/economyTypes";
 import { ATTR_LABELS, POSITION_LABELS } from "../types";
 import { sound } from "../audio";
-import { listPacks, getCachedPacks, type DBPack } from "../cardsRepo";
+import { listPacks, getCachedPacks, listAllCards, cardBelongsToPack, type DBPack } from "../cardsRepo";
 import { getPackTheme } from "../packThemes";
 
 type Props = {
@@ -26,7 +26,7 @@ const RARITY_ORDER: Record<CardRarity, number> = {
 };
 
 export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
-  const catalog = getMasterCatalog();
+  const [catalog, setCatalog] = useState<CatalogCard[]>(() => getMasterCatalog());
   const inventory = getPlayerInventory();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -38,6 +38,9 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
   const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => getCachedPacks());
 
   useEffect(() => {
+    listAllCards().then(() => {
+      setCatalog(getMasterCatalog());
+    });
     listPacks().then((packs) => {
       if (packs && packs.length > 0) {
         setAvailablePacks(packs);
@@ -71,8 +74,10 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
 
         // 3. Collection/Pack Filter
         if (packFilter !== "ALL") {
-          const cardPacks = card.pack_ids ?? [];
-          const belongs = cardPacks.includes(packFilter) || card.collection === packFilter;
+          const belongs =
+            cardBelongsToPack(card as any, packFilter, availablePacks) ||
+            (card.pack_ids ?? []).includes(packFilter) ||
+            card.collection === packFilter;
           if (!belongs) return false;
         }
 

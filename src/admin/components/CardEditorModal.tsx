@@ -34,6 +34,10 @@ export function CardEditorModal({
       const match = packs.find((p) => initial.pack_ids!.includes(p.id) || initial.pack_ids!.includes(p.slug));
       if (match) return match.id;
     }
+    const copa02 = packs.find((p) => p.slug === "copa-02" || p.id === "150e5ef0-d84b-4d2e-8c81-0b514dcd7884");
+    if (copa02 && (initial.card_number === 272 || initial.card_number === 273)) {
+      return copa02.id;
+    }
     const triplice = packs.find((p) => p.slug === "triplice-azul-03");
     if (triplice && initial.card_number && initial.card_number >= 244 && initial.card_number <= 265) {
       return triplice.id;
@@ -42,9 +46,23 @@ export function CardEditorModal({
     if (welson && initial.card_number && initial.card_number >= 233 && initial.card_number <= 243) {
       return welson.id;
     }
-    const psj = packs.find((p) => p.slug === "parque-sao-jorge-90");
-    return psj ? psj.id : packs[0] ? packs[0].id : "founder";
+    const founder = packs.find((p) => p.slug === FOUNDER_SLUG);
+    return founder ? founder.id : packs[0] ? packs[0].id : "founder";
   });
+
+  useEffect(() => {
+    if (initial.pack_ids && initial.pack_ids.length > 0) {
+      const match = packs.find((p) => initial.pack_ids!.includes(p.id) || initial.pack_ids!.includes(p.slug));
+      if (match) {
+        setSelectedPackId(match.id);
+        return;
+      }
+    }
+    const copa02 = packs.find((p) => p.slug === "copa-02" || p.id === "150e5ef0-d84b-4d2e-8c81-0b514dcd7884");
+    if (copa02 && (initial.card_number === 272 || initial.card_number === 273)) {
+      setSelectedPackId(copa02.id);
+    }
+  }, [initial, packs]);
 
   // 3. Nome Real & 4. Nome Carta (Paródia)
   const [realName, setRealName] = useState(initial.real_name ?? "");

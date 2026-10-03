@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchDecks } from "./cardsRepo";
+import { fetchDecks, listAllCards, listPacks } from "./cardsRepo";
 import type { Card, Difficulty, LastResult } from "./types";
 import { Scoreboard } from "./components/Scoreboard";
 import { EventToast } from "./components/EventToast";
@@ -21,11 +21,11 @@ import { EconomyHeader } from "./components/EconomyHeader";
 import { AlbumView } from "./album/AlbumView";
 import { PackShop } from "./shop/PackShop";
 import { TradingCenter } from "./trades/TradingCenter";
-import { addCoins, MATCH_REWARDS } from "./economy/economyService";
+import { addCoins, MATCH_REWARDS, isStarterPackClaimed, claimFullStarterPack } from "./economy/economyService";
 import { sound } from "./audio";
 
 import { MobileNavDock, type LobbyScreen } from "./components/MobileNavDock";
-import { FtueGuideOverlay } from "./components/FtueGuideOverlay";
+import { RetroBoombox } from "./components/RetroBoombox";
 
 type Screen = "start" | "playing" | "end" | "matchmaking" | "album" | "shop" | "trades" | "carteira";
 
@@ -56,6 +56,13 @@ export function GameScreen() {
   }, [navigate]);
 
   useEffect(() => {
+    if (!isStarterPackClaimed()) {
+      claimFullStarterPack("copa-90");
+    }
+    writeJSON(LS_KEYS.ftueCompleted, true);
+    writeJSON(LS_KEYS.starterPackClaimed, true);
+    listAllCards().catch(() => {});
+    listPacks().catch(() => {});
     const stored = readJSON<LastResult>(LS_KEYS.lastResult);
     if (stored) setLastResult(stored);
     const storedDiff = readJSON<Difficulty>(LS_KEYS.difficulty);
@@ -191,13 +198,8 @@ export function GameScreen() {
         />
       )}
 
-      {/* GUIA PASSO A PASSO INTERATIVO (FTUE - PRIMEIRO MINUTO) */}
-      <FtueGuideOverlay
-        currentScreen={screen}
-        onNavigate={(target) => setScreen(target)}
-        onStartFirstMatch={() => start("NORMAL", cupPack)}
-        matchFinished={screen === "end"}
-      />
+      {/* RADINHO RETRÔ / WALKMAN ESPORTIVO FLUTUANTE (EM TODAS AS TELAS E NA BATALHA) */}
+      <RetroBoombox floating currentScreen={screen} />
     </>
   );
 }

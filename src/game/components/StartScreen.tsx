@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import type { Difficulty, LastResult } from "../types";
+import type { Card, Difficulty, LastResult } from "../types";
 import { DIFFICULTY_LABELS } from "../types";
 import { CUP_PACKS, getPackTheme, type PackTheme } from "../packThemes";
 import {
@@ -9,9 +9,11 @@ import {
   canCurrentPlayerAccessPack,
   isPackExclusive,
   grantExclusiveCardsToOwner,
+  cardBelongsToPack,
   ADMIN_EMAILS,
   type DBPack,
 } from "../cardsRepo";
+import { CardView } from "./CardView";
 import { supabase } from "@/integrations/supabase/client";
 import { OnlineBadge } from "../multiplayer/OnlineBadge";
 import {
@@ -25,7 +27,6 @@ import {
 import { getMasterCatalog } from "../economy/cardCatalog";
 import { getPlayerLevel } from "../playerLevel";
 import { sound } from "../audio";
-import { RetroBoombox } from "./RetroBoombox";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { LS_KEYS, readJSON, writeJSON } from "../storage";
 
@@ -125,6 +126,113 @@ export function StartScreen({
   const collectedCards = catalog.filter((c) => c && (inventory[c.id] ?? 0) >= 1).length;
   const progressPercent = Math.min(100, Math.max(0, Math.round((collectedCards / totalCards) * 100)));
 
+  // Elenco e cartas do Baralho / Coleção Ativa
+  const squadCards = useMemo(() => {
+    const matching = catalog.filter((card) => {
+      return (
+        cardBelongsToPack(card as any, selectedPack, availablePacks) ||
+        (card.pack_ids ?? []).includes(selectedPack) ||
+        card.collection === selectedPack
+      );
+    });
+    if (matching.length > 0) return matching;
+    return catalog.slice(0, 11);
+  }, [catalog, selectedPack, availablePacks]);
+
+  // Craque/Capitão do Baralho: carta com maior OVR
+  const captainCard = useMemo(() => {
+    if (squadCards.length === 0) return null;
+    return [...squadCards].sort((a, b) => (b.ovr ?? 70) - (a.ovr ?? 70))[0];
+  }, [squadCards]);
+
+  // Força Geral do Esquadrão (OVR Médio)
+  const avgSquadOvr = useMemo(() => {
+    if (squadCards.length === 0) return 82;
+    const sum = squadCards.reduce((acc, c) => acc + (c.ovr ?? 70), 0);
+    return Math.round(sum / squadCards.length);
+  }, [squadCards]);
+
+  // Carta ativa selecionada para prévia (padrão é o capitão)
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
+
+  // Redefine a prévia quando o pack mudar
+  useEffect(() => {
+    setPreviewCardId(null);
+  }, [selectedPack]);
+
+  const activePreviewCard = useMemo(() => {
+    if (previewCardId) {
+      const found = squadCards.find((c) => c.id === previewCardId);
+      if (found) return found;
+    }
+    return captainCard;
+  }, [previewCardId, squadCards, captainCard]);
+
+  const cardForCardView: Card | undefined = useMemo(() => {
+    if (!activePreviewCard) return undefined;
+    return {
+      id: activePreviewCard.id,
+      name: activePreviewCard.name,
+      position: activePreviewCard.position as any,
+      ovr: activePreviewCard.ovr ?? 70,
+      attrs: activePreviewCard.attrs as any,
+      quote: activePreviewCard.quote ?? "",
+      packSlug: selectedPack,
+      cardNumber: activePreviewCard.cardNumber ?? activePreviewCard.slotNumber,
+      imageUrl: activePreviewCard.imageUrl,
+      clubBadgeUrl: activePreviewCard.clubBadgeUrl,
+    };
+  }, [activePreviewCard, selectedPack]);
+
+  // Mapa de Força Média (OVR) por Coleção / Baralho
+  const packOvrMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const p of availablePacks) {
+      const cards = catalog.filter((c) => {
+        return (
+          cardBelongsToPack(c as any, p.slug, availablePacks) ||
+          (c.pack_ids ?? []).includes(p.slug) ||
+          (c.pack_ids ?? []).includes(p.id) ||
+          c.collection === p.slug
+        );
+      });
+      if (cards.length > 0) {
+        const sum = cards.reduce((acc, c) => acc + (c.ovr ?? 70), 0);
+        map[p.slug] = Math.round(sum / cards.length);
+      } else {
+        if (p.slug.includes("02")) map[p.slug] = 88;
+        else if (p.slug.includes("94")) map[p.slug] = 86;
+        else if (p.slug.includes("triplice")) map[p.slug] = 85;
+        else if (p.slug.includes("sao-jorge") || p.slug.includes("corinthians")) map[p.slug] = 83;
+        else map[p.slug] = 84;
+      }
+    }
+    return map;
+  }, [availablePacks, catalog]);
+
+  const getPackStyleInfo = (slug: string) => {
+    const s = slug.toLowerCase();
+    if (s.includes("copa-90") || s === "copa-90") {
+      return { flag: "🇧🇷", style: "Velocidade e Pontas" };
+    }
+    if (s.includes("copa-94") || s === "copa-94") {
+      return { flag: "🇧🇷", style: "Raça e Finalização" };
+    }
+    if (s.includes("copa-02") || s === "copa-02") {
+      return { flag: "🇧🇷", style: "Drible e Talento Pentacampeão" };
+    }
+    if (s.includes("parque-sao-jorge") || s.includes("corinthians")) {
+      return { flag: "⚫", style: "Fibra e Marcação Pesada" };
+    }
+    if (s.includes("triplice") || s.includes("azul")) {
+      return { flag: "🏴", style: "Passe, Criação e Controle" };
+    }
+    if (s.includes("leoes")) {
+      return { flag: "🦁", style: "Garra e Ataque Rápido" };
+    }
+    return { flag: "⚽", style: "Equilíbrio Tático" };
+  };
+
   const selectSection = (sec: MenuSection) => {
     sound.playAttrSelect();
     if (sec === "album") {
@@ -152,7 +260,15 @@ export function StartScreen({
   };
 
   return (
-    <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col relative selection:bg-arcade-yellow selection:text-arcade-dark">
+    <div className="min-h-screen bg-[#070e1b] text-arcade-cream flex flex-col relative selection:bg-arcade-yellow selection:text-arcade-dark overflow-x-hidden">
+      {/* Camadas Atmosféricas de Estádio Noturno (Matando o abismo azul com textura e holofotes) */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(20,50,95,0.7),rgba(5,10,18,0.98))]" />
+        <div className="absolute -top-32 -left-32 w-[550px] h-[750px] bg-gradient-to-br from-arcade-yellow/12 via-emerald-400/5 to-transparent blur-3xl transform -rotate-12" />
+        <div className="absolute -top-32 -right-32 w-[550px] h-[750px] bg-gradient-to-bl from-cyan-400/10 via-blue-500/5 to-transparent blur-3xl transform rotate-12" />
+        <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#ffd60a_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
+        <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.85)]" />
+      </div>
       {/* 0. TOP HUD (Desktop: 3 zonas | Mobile: logo + moedas) */}
       <header className="sticky top-0 z-40 bg-arcade-dark/95 backdrop-blur-md border-b-2 border-arcade-yellow shadow-lg">
         <div className="px-3 sm:px-5 py-2 flex items-center justify-between gap-2">
@@ -237,11 +353,11 @@ export function StartScreen({
           {/* ── ZONA 3: DIREITA — Economia + Utilitários Discretos ── */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
-            {/* Contos (Moeda Free) — caixa metálica âmbar */}
+            {/* Conto (Moeda Free) — caixa metálica âmbar */}
             <button
               type="button"
               onClick={() => selectSection("carteira")}
-              title="Seus Contos (moeda ganha jogando) — clique para ver carteira"
+              title="Seu saldo de conto (moeda ganha jogando) — clique para ver a carteira"
               className="flex items-center gap-1 bg-arcade-dark/80 hover:bg-arcade-blue/60 border border-amber-800/50 hover:border-arcade-yellow rounded-lg px-2 py-1.5 transition-colors cursor-pointer active:scale-95"
             >
               <span className="text-sm">🪙</span>
@@ -338,338 +454,502 @@ export function StartScreen({
       </header>
 
       {/* 1. PAINEL CENTRAL DINÂMICO (CENTER STAGE) */}
-      <main className="flex-1 flex flex-col justify-start items-center p-3 sm:p-6 md:p-8 relative overflow-y-auto pb-48">
+      <main className="flex-1 flex flex-col justify-start items-center p-3 sm:p-6 md:p-8 relative z-10 overflow-y-auto pb-48">
         <div className="w-full max-w-[94vw] 2xl:max-w-7xl flex flex-col items-center">
-          {/* SEÇÃO 1: JOGAR (HUB DE BATALHA ESTILO CLASH ROYALE) */}
+          {/* SEÇÃO 1: JOGAR (LOBBY DE BATALHA RETRÔ EM 2 COLUNAS) */}
           {activeSection === "jogar" && (
-            <div className="w-full max-w-xl flex flex-col items-center gap-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-5xl xl:max-w-6xl flex flex-col gap-6 animate-in fade-in duration-200">
+              <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
 
-              {/* 1. ARENA RETRÔ / ESTÁDIO ANOS 90 (HERO STAGE) */}
-              <div className="w-full bg-gradient-to-b from-emerald-950/85 via-slate-950 to-arcade-dark border-3 border-arcade-yellow rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
-                {/* Efeito Holofotes do Estádio */}
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-28 bg-arcade-yellow/15 blur-2xl rounded-full pointer-events-none" />
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-80" />
+                {/* ── COLUNA DA ESQUERDA: SEU ESQUADRÃO EM CAMPO (5 colunas no desktop) ── */}
+                <div className="w-full lg:col-span-5 flex flex-col gap-3">
+                  <div className="w-full bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-900/95 border-3 border-arcade-yellow rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden backdrop-blur-md">
+                    {/* Brilho de Fundo dos Refletores */}
+                    <div className="absolute -top-16 -left-16 w-48 h-48 bg-arcade-yellow/15 blur-3xl rounded-full pointer-events-none" />
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-80" />
 
-                {/* Cabeçalho da Arena */}
-                <div className="flex items-center justify-between mb-3 relative z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🏟️</span>
-                    <div>
-                      <div className="font-arcade text-[8px] sm:text-[9px] text-emerald-400 tracking-widest uppercase">
-                        ARENA DE DUELO RETRÔ
-                      </div>
-                      <div className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight">
-                        ESTÁDIO DOS ANOS 90
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Nível do Treinador */}
-                  <div className="flex items-center gap-1.5 bg-black/60 border border-arcade-yellow/40 rounded-xl px-2.5 py-1">
-                    <span className="text-sm">⭐</span>
-                    <div className="text-right">
-                      <div className="font-arcade text-[9px] text-arcade-yellow font-bold leading-none">
-                        NV. {playerLevel.level}
-                      </div>
-                      <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[90px] truncate">
-                        {playerLevel.title}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Diorama / Gramado Estilizado */}
-                <div className="w-full bg-gradient-to-b from-emerald-800 to-emerald-950 rounded-xl p-3 border-2 border-emerald-500/40 relative flex flex-col items-center justify-center my-1 shadow-inner overflow-hidden">
-                  {/* Linhas do Campo de Futebol */}
-                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-px bg-white/20 pointer-events-none" />
-                  <div className="absolute w-16 h-16 rounded-full border border-white/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 border-b border-x border-white/20 pointer-events-none" />
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-5 border-t border-x border-white/20 pointer-events-none" />
-
-                  {/* Centro do Campo com Bola */}
-                  <div className="relative z-10 flex flex-col items-center text-center py-2">
-                    <div className="w-12 h-12 rounded-full bg-black/40 border-2 border-arcade-yellow flex items-center justify-center text-2xl shadow-lg mb-1 animate-pulse">
-                      ⚽
-                    </div>
-                    <div className="font-arcade text-[10px] text-arcade-yellow font-bold drop-shadow tracking-wider">
-                      {playMode === "solo" ? "DISPUTA SOLO VS IA" : "DUELO MULTIPLAYER 1X1"}
-                    </div>
-                    <div className="font-body text-[10px] text-arcade-cream/80 max-w-xs mt-0.5">
-                      {playMode === "solo"
-                        ? "Enfrente a IA tática com calibração adaptativa e ganhe Contos!"
-                        : "Desafie um amigo ao vivo com código de sala e Traps!"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Barra de XP de Carreira */}
-                <div className="mt-3 relative z-10">
-                  <div className="flex justify-between items-center font-arcade text-[8px] text-arcade-cream/80 mb-1">
-                    <span>PROGRESSO DE CARREIRA</span>
-                    <span className="text-arcade-yellow">{playerLevel.xp} / {playerLevel.nextLevelXp} XP</span>
-                  </div>
-                  <div className="w-full bg-black/70 h-2 rounded-full overflow-hidden border border-arcade-yellow/30">
-                    <div
-                      className="h-full bg-gradient-to-r from-yellow-400 via-amber-400 to-amber-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,200,0,0.8)]"
-                      style={{ width: `${playerLevel.progressPercent}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Mini Placar do Último Jogo */}
-                {lastResult && (
-                  <div className="mt-2.5 bg-black/50 border border-arcade-yellow/30 rounded-xl px-3 py-1.5 flex items-center justify-between">
-                    <span className="font-arcade text-[8px] text-arcade-cream/70">ÚLTIMO PLACAR:</span>
-                    <div className="flex items-center gap-1.5 font-arcade text-[10px]">
-                      <span className="text-arcade-yellow">{lastResult.goals.p}</span>
-                      <span className="text-arcade-cream/50">×</span>
-                      <span className="text-arcade-cream">{lastResult.goals.ai}</span>
-                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                        lastResult.goals.p > lastResult.goals.ai
-                          ? "bg-emerald-600 text-white"
-                          : lastResult.goals.p === lastResult.goals.ai
-                          ? "bg-amber-600 text-white"
-                          : "bg-rose-700 text-white"
-                      }`}>
-                        {lastResult.goals.p > lastResult.goals.ai ? "VITÓRIA" : lastResult.goals.p === lastResult.goals.ai ? "EMPATE" : "DERROTA"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. SELETOR DE MODO TÁTIL (SEGMENTED TABS) */}
-              <div className="w-full grid grid-cols-2 gap-2 bg-black/40 p-1.5 rounded-2xl border border-arcade-yellow/30 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playAttrSelect();
-                    setPlayMode("solo");
-                  }}
-                  className={`py-2 px-3 rounded-xl font-arcade text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    playMode === "solo"
-                      ? "bg-gradient-to-r from-arcade-yellow to-amber-500 text-arcade-dark font-bold shadow-[0_2px_8px_rgba(255,204,0,0.4)] scale-[1.02]"
-                      : "text-arcade-cream/70 hover:text-arcade-cream hover:bg-white/5"
-                  }`}
-                >
-                  <span>🤖</span>
-                  <span>SOLO VS IA</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playAttrSelect();
-                    setPlayMode("online");
-                  }}
-                  className={`py-2 px-3 rounded-xl font-arcade text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
-                    playMode === "online"
-                      ? "bg-gradient-to-r from-arcade-yellow to-amber-500 text-arcade-dark font-bold shadow-[0_2px_8px_rgba(255,204,0,0.4)] scale-[1.02]"
-                      : "text-arcade-cream/70 hover:text-arcade-cream hover:bg-white/5"
-                  }`}
-                >
-                  <span>⚔️</span>
-                  <span>1X1 HUMANO</span>
-                  <span className="font-arcade text-[7px] bg-red-600 text-white px-1 py-0.2 rounded-full font-bold ml-1">
-                    AO VIVO
-                  </span>
-                </button>
-              </div>
-
-              {/* 3. ZONA DE AÇÃO DO POLEGAR */}
-              {playMode === "solo" ? (
-                <div className="w-full flex flex-col gap-3">
-                  {/* Ajustes Rápidos: Dificuldade + Coleção/Baralho */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                    {/* Seletor de Dificuldade da IA */}
-                    <div className="bg-arcade-dark/90 border-2 border-arcade-yellow/50 rounded-xl p-2.5 flex flex-col justify-between">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-arcade text-[8px] text-arcade-yellow uppercase">DIFICULDADE DA IA</span>
-                        <span className="font-arcade text-[7.5px] text-arcade-cream/60">
-                          {selectedDifficulty === "EASY" ? "TREINO" : selectedDifficulty === "NORMAL" ? "PADRÃO" : "PRO"}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {(["EASY", "NORMAL", "HARD"] as Difficulty[]).map((d) => (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => {
-                              sound.playAttrSelect();
-                              setSelectedDifficulty(d);
-                              writeJSON(LS_KEYS.difficulty, d);
-                            }}
-                            className={`py-1 rounded font-arcade text-[9px] transition-all cursor-pointer ${
-                              selectedDifficulty === d
-                                ? "bg-arcade-yellow text-arcade-dark font-bold shadow"
-                                : "bg-arcade-blue/50 text-arcade-cream/70 hover:bg-arcade-blue hover:text-arcade-cream border border-arcade-yellow/20"
-                            }`}
-                          >
-                            {d === "EASY" ? "FÁCIL" : d === "NORMAL" ? "MÉDIO" : "DIFÍCIL"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Seletor de Baralho / Coleção Ativa */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sound.playAttrSelect();
-                        setShowPackDrawer(true);
-                      }}
-                      className="bg-arcade-dark/90 hover:bg-slate-900 border-2 border-arcade-yellow/50 hover:border-arcade-yellow rounded-xl p-2.5 flex items-center justify-between text-left transition-all cursor-pointer active:scale-95 group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-lg bg-arcade-blue border border-arcade-yellow flex items-center justify-center font-arcade text-xs text-arcade-yellow shadow font-bold">
+                    {/* Topo do Card: Nome do Baralho + Botão Trocar */}
+                    <div className="flex items-center justify-between gap-2 border-b border-arcade-yellow/20 pb-3 mb-3 relative z-10">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-arcade-yellow to-amber-500 text-arcade-dark font-arcade font-black text-sm flex items-center justify-center shadow-[0_2px_8px_rgba(255,204,0,0.4)] border border-arcade-cream shrink-0">
                           {getPackTheme(selectedPack).badge ?? "90"}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-arcade text-[8px] text-arcade-yellow/80 uppercase leading-none">
-                            BARALHO ATIVO
+                        <div className="min-w-0">
+                          <span className="font-arcade text-[8px] sm:text-[9px] text-arcade-yellow/80 uppercase tracking-widest block">
+                            SEU ESQUADRÃO EM CAMPO
                           </span>
-                          <span className="font-arcade text-xs text-arcade-cream font-bold truncate max-w-[130px] sm:max-w-[160px] leading-tight mt-0.5">
+                          <span className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight block truncate max-w-[150px] sm:max-w-[210px]">
                             {availablePacks.find((p) => p.slug === selectedPack)?.name ?? "Copa 90"}
                           </span>
                         </div>
                       </div>
-                      <span className="font-arcade text-[10px] text-arcade-yellow bg-arcade-blue/60 border border-arcade-yellow/40 rounded px-2 py-1 group-hover:bg-arcade-yellow group-hover:text-arcade-dark transition-colors">
-                        TROCAR ▾
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playAttrSelect();
+                          setShowPackDrawer(true);
+                        }}
+                        className="font-arcade text-[8.5px] bg-arcade-blue/70 hover:bg-arcade-yellow hover:text-arcade-dark text-arcade-cream border border-arcade-yellow/50 rounded-lg px-2.5 py-1.5 transition-all cursor-pointer active:scale-95 shadow group flex items-center gap-1 shrink-0"
+                        title="Trocar baralho de cartas ativo"
+                      >
+                        <span>TROCAR</span>
+                        <span className="text-[7px] group-hover:translate-y-0.5 transition-transform">▾</span>
+                      </button>
+                    </div>
+
+                    {/* Estatísticas Rápidas: Força Geral (OVR Médio) e Elenco */}
+                    <div className="grid grid-cols-2 gap-2 mb-3 relative z-10">
+                      <div className="bg-black/50 border border-arcade-yellow/30 rounded-xl p-2.5 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-base shrink-0">
+                          ⚡
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-arcade text-[7px] text-arcade-cream/70 uppercase">FORÇA GERAL</span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-arcade text-base sm:text-lg text-arcade-yellow font-black leading-none">
+                              {avgSquadOvr}
+                            </span>
+                            <span className="font-arcade text-[7.5px] text-emerald-400 font-bold">OVR MÉDIO</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-black/50 border border-arcade-yellow/30 rounded-xl p-2.5 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-base shrink-0">
+                          📋
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-arcade text-[7px] text-arcade-cream/70 uppercase">ESCALAÇÃO</span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-arcade text-base sm:text-lg text-arcade-cream font-black leading-none">
+                              {squadCards.length}
+                            </span>
+                            <span className="font-arcade text-[7.5px] text-arcade-yellow/80 font-bold">CRAQUES</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Palco Central: Carta do Capitão / Craque em Destaque */}
+                    <div className="flex flex-col items-center justify-center py-1 relative z-10">
+                      {/* Faixa do Craque */}
+                      <div className="mb-2 flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-400/30 to-amber-500/20 border border-arcade-yellow/50 rounded-full px-3 py-0.5 text-center shadow">
+                        <span className="text-xs">⭐</span>
+                        <span className="font-arcade text-[8px] sm:text-[8.5px] text-arcade-yellow font-black tracking-wider uppercase">
+                          {activePreviewCard?.id === captainCard?.id ? "CAPITÃO & CRAQUE DO ESQUADRÃO" : "CRAQUE TITULAR"}
+                        </span>
+                      </div>
+
+                      {/* Carta com Brilho de Raridade */}
+                      <div className="relative group my-1">
+                        <div className="absolute -inset-2.5 bg-gradient-to-r from-yellow-500/30 via-amber-400/40 to-yellow-500/30 rounded-2xl blur-lg opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="relative shadow-2xl rounded-lg transform transition-transform group-hover:scale-[1.02]">
+                          <CardView card={cardForCardView} />
+                        </div>
+                      </div>
+
+                      {/* Carrossel de Titulares do Baralho */}
+                      {squadCards.length > 1 && (
+                        <div className="w-full mt-3">
+                          <div className="flex items-center justify-between font-arcade text-[7px] text-arcade-cream/60 uppercase mb-1 px-0.5">
+                            <span>ELENCO ESCALADO ({squadCards.length})</span>
+                            <span className="text-arcade-yellow/80">INSPECIONAR JOGADOR</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin scrollbar-thumb-arcade-yellow/40 scrollbar-track-transparent">
+                            {squadCards.map((sc) => {
+                              const isSelected = activePreviewCard?.id === sc.id;
+                              const isCap = sc.id === captainCard?.id;
+                              return (
+                                <button
+                                  key={sc.id}
+                                  type="button"
+                                  onClick={() => {
+                                    sound.playCardFlip();
+                                    setPreviewCardId(sc.id);
+                                  }}
+                                  className={`flex flex-col items-center shrink-0 rounded-lg p-1.5 border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? "bg-arcade-yellow text-arcade-dark border-arcade-cream shadow-[0_0_10px_rgba(255,204,0,0.7)] scale-105"
+                                      : "bg-black/60 hover:bg-black/90 text-arcade-cream border-arcade-yellow/30 hover:border-arcade-yellow"
+                                  }`}
+                                  title={`${sc.name} (${sc.position} - OVR ${sc.ovr})`}
+                                >
+                                  <div className="flex items-center gap-0.5 font-arcade text-[7px] font-bold">
+                                    {isCap && <span className="text-[7.5px]">⭐</span>}
+                                    <span>{sc.position}</span>
+                                  </div>
+                                  <span className={`font-arcade text-[9px] font-black ${isSelected ? "text-arcade-dark" : "text-arcade-yellow"}`}>
+                                    {sc.ovr}
+                                  </span>
+                                  <span className="font-arcade text-[6.5px] truncate max-w-[48px] leading-tight">
+                                    {sc.name.split(" ")[0]}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── COLUNA DA DIREITA: PAINEL DE PARTIDA & CONFIGURAÇÕES (7 colunas no desktop) ── */}
+                <div className="w-full lg:col-span-7 flex flex-col gap-4">
+                  {/* 1. SELETOR DE MODO NO TOPO */}
+                  <div className="w-full grid grid-cols-2 gap-2 bg-black/50 p-1.5 rounded-2xl border-2 border-arcade-yellow/40 shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playAttrSelect();
+                        setPlayMode("solo");
+                      }}
+                      className={`py-2.5 px-3 rounded-xl font-arcade text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        playMode === "solo"
+                          ? "bg-gradient-to-r from-arcade-yellow via-amber-400 to-amber-500 text-arcade-dark font-black shadow-[0_2px_10px_rgba(255,204,0,0.5)] scale-[1.02]"
+                          : "text-arcade-cream/70 hover:text-arcade-cream hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="text-base">🤖</span>
+                      <span>SOLO VS IA</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playAttrSelect();
+                        setPlayMode("online");
+                      }}
+                      className={`py-2.5 px-3 rounded-xl font-arcade text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer relative ${
+                        playMode === "online"
+                          ? "bg-gradient-to-r from-arcade-yellow via-amber-400 to-amber-500 text-arcade-dark font-black shadow-[0_2px_10px_rgba(255,204,0,0.5)] scale-[1.02]"
+                          : "text-arcade-cream/70 hover:text-arcade-cream hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="text-base">⚔️</span>
+                      <span>1X1 HUMANO</span>
+                      <span className="font-arcade text-[7px] bg-red-600 text-white px-1.5 py-0.5 rounded-full font-bold ml-1 animate-pulse">
+                        EM BREVE
                       </span>
                     </button>
                   </div>
 
-                  {/* BOTÃO GIGANTE DE BATALHA (CLASH ROYALE STYLE) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playAttrSelect();
-                      onStart(selectedDifficulty, selectedPack);
-                    }}
-                    className="w-full group relative overflow-hidden rounded-2xl bg-gradient-to-b from-arcade-yellow via-amber-400 to-amber-500 border-3 border-arcade-cream py-3.5 sm:py-4 px-6 text-center cursor-pointer shadow-[0_6px_0_#92400e,0_12px_24px_rgba(0,0,0,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#92400e] transition-all"
-                  >
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+                  {/* 2. CARD DA ARENA / ESTÁDIO RETRÔ */}
+                  <div className="w-full bg-gradient-to-b from-emerald-950/90 via-slate-950 to-arcade-dark border-3 border-arcade-yellow rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+                    {/* Holofotes do Estádio */}
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-28 bg-arcade-yellow/15 blur-2xl rounded-full pointer-events-none" />
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-80" />
 
-                    <div className="flex items-center justify-center gap-3">
-                      <span className="text-2xl sm:text-3xl group-hover:rotate-12 transition-transform">⚽</span>
-                      <div className="flex flex-col items-center">
-                        <span className="font-arcade text-lg sm:text-2xl text-arcade-dark font-black tracking-wider leading-none drop-shadow-[0_1px_2px_rgba(255,255,255,0.4)]">
-                          B A T A L H A
-                        </span>
-                        <span className="font-arcade text-[8px] sm:text-[9px] text-arcade-dark/80 tracking-widest uppercase mt-0.5">
-                          ENTRAR EM CAMPO VS IA · VALENDO CONTO 🪙
-                        </span>
+                    {/* Topo da Arena: Título + Nível do Treinador */}
+                    <div className="flex items-center justify-between mb-3 relative z-10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🏟️</span>
+                        <div>
+                          <div className="font-arcade text-[8px] sm:text-[9px] text-emerald-400 tracking-widest uppercase">
+                            ARENA DE DUELO RETRÔ
+                          </div>
+                          <div className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight">
+                            ESTÁDIO DOS ANOS 90
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nível do Treinador */}
+                      <div className="flex items-center gap-1.5 bg-black/60 border border-arcade-yellow/40 rounded-xl px-2.5 py-1">
+                        <span className="text-sm">⭐</span>
+                        <div className="text-right">
+                          <div className="font-arcade text-[9px] text-arcade-yellow font-bold leading-none">
+                            NV. {playerLevel.level}
+                          </div>
+                          <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[90px] truncate">
+                            {playerLevel.title}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </button>
-                </div>
-              ) : (
-                /* MODO 1X1 HUMANO */
-                <div className="w-full flex flex-col gap-3">
-                  <div className="bg-arcade-dark/90 border-2 border-arcade-yellow/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                    <div>
-                      <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                        <span className="text-xl">⚔️</span>
-                        <span className="font-arcade text-xs text-arcade-yellow font-bold">
-                          DUELO AO VIVO EM TEMPO REAL
-                        </span>
+
+                    {/* Diorama / Gramado Estilizado com Microcopy Raiz */}
+                    <div className="w-full bg-gradient-to-b from-emerald-800 to-emerald-950 rounded-xl p-3.5 border-2 border-emerald-500/40 relative flex flex-col items-center justify-center my-1 shadow-inner overflow-hidden">
+                      {/* Linhas do Campo de Futebol */}
+                      <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-px bg-white/20 pointer-events-none" />
+                      <div className="absolute w-16 h-16 rounded-full border border-white/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 border-b border-x border-white/20 pointer-events-none" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-5 border-t border-x border-white/20 pointer-events-none" />
+
+                      {/* Centro do Campo com Bola e Microcopy Raiz */}
+                      <div className="relative z-10 flex flex-col items-center text-center py-2">
+                        <div className="w-12 h-12 rounded-full bg-black/40 border-2 border-arcade-yellow flex items-center justify-center text-2xl shadow-lg mb-1 animate-pulse">
+                          ⚽
+                        </div>
+                        <div className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold drop-shadow tracking-wider">
+                          {playMode === "solo" ? "DISPUTA SOLO VS IA" : "DUELO MULTIPLAYER 1X1"}
+                        </div>
+                        <div className="font-body text-xs text-arcade-cream font-medium max-w-sm mt-1">
+                          {playMode === "solo"
+                            ? "Enfrente a máquina no clássico e fature seu conto!"
+                            : "Desafie um amigo ao vivo com código de sala e Traps!"}
+                        </div>
                       </div>
-                      <p className="font-body text-xs text-arcade-cream/80 max-w-sm">
-                        Crie uma sala privada, passe o código de 5 letras para um amigo e dispute a partida inteira ao vivo!
-                      </p>
                     </div>
-                    <OnlineBadge />
+
+                    {/* Barra de XP de Carreira */}
+                    <div className="mt-3 relative z-10">
+                      <div className="flex justify-between items-center font-arcade text-[8px] text-arcade-cream/80 mb-1">
+                        <span>PROGRESSO DE CARREIRA</span>
+                        <span className="text-arcade-yellow">{playerLevel.xp} / {playerLevel.nextLevelXp} XP</span>
+                      </div>
+                      <div className="w-full bg-black/70 h-2 rounded-full overflow-hidden border border-arcade-yellow/30">
+                        <div
+                          className="h-full bg-gradient-to-r from-yellow-400 via-amber-400 to-amber-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,200,0,0.8)]"
+                          style={{ width: `${playerLevel.progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Mini Placar do Último Jogo */}
+                    {lastResult && (
+                      <div className="mt-2.5 bg-black/50 border border-arcade-yellow/30 rounded-xl px-3 py-1.5 flex items-center justify-between">
+                        <span className="font-arcade text-[8px] text-arcade-cream/70">ÚLTIMO PLACAR:</span>
+                        <div className="flex items-center gap-1.5 font-arcade text-[10px]">
+                          <span className="text-arcade-yellow">{lastResult.goals.p}</span>
+                          <span className="text-arcade-cream/50">×</span>
+                          <span className="text-arcade-cream">{lastResult.goals.ai}</span>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                            lastResult.goals.p > lastResult.goals.ai
+                              ? "bg-emerald-600 text-white"
+                              : lastResult.goals.p === lastResult.goals.ai
+                              ? "bg-amber-600 text-white"
+                              : "bg-rose-700 text-white"
+                          }`}>
+                            {lastResult.goals.p > lastResult.goals.ai ? "VITÓRIA" : lastResult.goals.p === lastResult.goals.ai ? "EMPATE" : "DERROTA"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* BOTÃO BATALHA 1X1 */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playAttrSelect();
-                      onPlayHuman();
-                    }}
-                    className="w-full group relative overflow-hidden rounded-2xl bg-gradient-to-b from-rose-500 via-arcade-red to-red-700 border-3 border-arcade-yellow py-3.5 sm:py-4 px-6 text-center cursor-pointer shadow-[0_6px_0_#4c0519,0_12px_24px_rgba(0,0,0,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#4c0519] transition-all"
-                  >
-                    <div className="flex items-center justify-center gap-3">
-                      <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">⚔️</span>
-                      <div className="flex flex-col items-center">
-                        <span className="font-arcade text-lg sm:text-2xl text-white font-black tracking-wider leading-none drop-shadow">
-                          CRIAR OU ENTRAR NA SALA
-                        </span>
-                        <span className="font-arcade text-[8px] sm:text-[9px] text-white/90 tracking-widest uppercase mt-0.5">
-                          DISPUTA COM TRAPS E PÊNALTIS ONLINE
-                        </span>
+                  {/* 3. CONFIGURAÇÕES DA PARTIDA & BOTÃO CTA */}
+                  {playMode === "solo" ? (
+                    <div className="w-full flex flex-col gap-3">
+                      {/* Seletor de Dificuldade da IA */}
+                      <div className="bg-arcade-dark/95 border-2 border-arcade-yellow/50 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-arcade text-[8.5px] text-arcade-yellow uppercase font-bold tracking-wider">
+                            DIFICULDADE DA IA
+                          </span>
+                          <span className="font-arcade text-[8px] text-arcade-cream/70">
+                            {selectedDifficulty === "EASY" ? "TREINO (IA SOLTA)" : selectedDifficulty === "NORMAL" ? "PADRÃO (EQUILIBRADO)" : "PRO (IA LÊ SUA MÃO)"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["EASY", "NORMAL", "HARD"] as Difficulty[]).map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => {
+                                sound.playAttrSelect();
+                                setSelectedDifficulty(d);
+                                writeJSON(LS_KEYS.difficulty, d);
+                              }}
+                              className={`py-2 px-1 rounded-lg font-arcade text-[9.5px] transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                                selectedDifficulty === d
+                                  ? "bg-arcade-yellow text-arcade-dark font-black shadow-[0_2px_8px_rgba(255,204,0,0.4)] scale-[1.02] border-2 border-arcade-cream"
+                                  : "bg-arcade-blue/50 text-arcade-cream/70 hover:bg-arcade-blue hover:text-arcade-cream border border-arcade-yellow/20"
+                              }`}
+                            >
+                              <span>{d === "EASY" ? "FÁCIL" : d === "NORMAL" ? "MÉDIO" : "DIFÍCIL"}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                </div>
-              )}
 
-              {/* GAVETA / BOTTOM SHEET DE SELEÇÃO DE PACOTES */}
+                      {/* BOTÃO PRINCIPAL DE ENTRADA EM CAMPO (CTA) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playAttrSelect();
+                          onStart(selectedDifficulty, selectedPack);
+                        }}
+                        className="w-full group relative overflow-hidden rounded-2xl bg-gradient-to-b from-arcade-yellow via-amber-400 to-amber-500 border-3 border-arcade-cream py-4 px-6 text-center cursor-pointer shadow-[0_6px_0_#92400e,0_12px_24px_rgba(0,0,0,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#92400e] transition-all animate-pulse"
+                      >
+                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="text-3xl group-hover:rotate-12 transition-transform">⚽</span>
+                          <div className="flex flex-col items-center">
+                            <span className="font-arcade text-xl sm:text-2xl text-arcade-dark font-black tracking-wider leading-none drop-shadow-[0_1px_2px_rgba(255,255,255,0.4)]">
+                              ENTRAR EM CAMPO · BATALHA
+                            </span>
+                            <span className="font-arcade text-[8.5px] sm:text-[9.5px] text-arcade-dark/90 tracking-widest uppercase mt-1 font-bold">
+                              VS IA · VALENDO CONTO 🪙
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  ) : (
+                    /* MODO 1X1 HUMANO */
+                    <div className="w-full flex flex-col gap-3">
+                      <div className="bg-arcade-dark/95 border-2 border-arcade-yellow/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left shadow-lg">
+                        <div>
+                          <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                            <span className="text-xl">⚔️</span>
+                            <span className="font-arcade text-xs text-arcade-yellow font-bold">
+                              DUELO AO VIVO EM TEMPO REAL
+                            </span>
+                          </div>
+                          <p className="font-body text-xs text-arcade-cream/80 max-w-sm">
+                            Crie uma sala privada, passe o código de 5 letras para um amigo e dispute a partida inteira ao vivo!
+                          </p>
+                        </div>
+                        <OnlineBadge />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playAttrSelect();
+                          onPlayHuman();
+                        }}
+                        className="w-full group relative overflow-hidden rounded-2xl bg-gradient-to-b from-rose-500 via-arcade-red to-red-700 border-3 border-arcade-yellow py-4 px-6 text-center cursor-pointer shadow-[0_6px_0_#4c0519,0_12px_24px_rgba(0,0,0,0.6)] hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#4c0519] transition-all"
+                      >
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="text-3xl group-hover:scale-110 transition-transform">⚔️</span>
+                          <div className="flex flex-col items-center">
+                            <span className="font-arcade text-xl sm:text-2xl text-white font-black tracking-wider leading-none drop-shadow">
+                              CRIAR OU ENTRAR NA SALA
+                            </span>
+                            <span className="font-arcade text-[8.5px] sm:text-[9.5px] text-white/90 tracking-widest uppercase mt-1 font-bold">
+                              DISPUTA COM TRAPS E PÊNALTIS ONLINE · VALENDO CONTO 🪙
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* GAVETA / MODAL DE SELEÇÃO DE PACOTES & DECKS */}
               {showPackDrawer && (
                 <div
-                  className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+                  className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
                   onClick={() => setShowPackDrawer(false)}
                 >
                   <div
-                    className="bg-arcade-dark border-t-4 sm:border-4 border-arcade-yellow rounded-t-3xl sm:rounded-2xl w-full max-w-lg p-5 shadow-2xl max-h-[85vh] flex flex-col"
+                    className="bg-gradient-to-b from-arcade-dark via-slate-950 to-arcade-dark border-t-4 sm:border-4 border-arcade-yellow rounded-t-3xl sm:rounded-2xl w-full max-w-2xl p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.9)] max-h-[88vh] flex flex-col relative overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {/* Header do Modal */}
                     <div className="flex items-center justify-between border-b-2 border-arcade-yellow/30 pb-3 mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">🏆</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">🏆</span>
                         <div>
-                          <h3 className="font-arcade text-sm text-arcade-yellow font-bold leading-tight">
-                            ESCOLHA A COLEÇÃO / DECK
+                          <h3 className="font-arcade text-sm sm:text-base text-arcade-yellow font-bold leading-tight">
+                            ESCOLHA SEU ESQUADRÃO / DECK
                           </h3>
-                          <span className="font-body text-[10px] text-arcade-cream/70">
-                            Cartas que entrarão em campo nesta partida
+                          <span className="font-body text-xs text-arcade-cream/80">
+                            Selecione o time titular que vai a campo nesta partida
                           </span>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowPackDrawer(false)}
-                        className="w-8 h-8 rounded-full bg-arcade-blue border border-arcade-yellow text-arcade-yellow hover:bg-arcade-red hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer"
+                        className="w-8 h-8 rounded-full bg-arcade-blue border border-arcade-yellow text-arcade-yellow hover:bg-arcade-red hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer transition-colors shadow"
+                        title="Fechar seleção de deck"
                       >
                         ✕
                       </button>
                     </div>
 
-                    <div className="overflow-y-auto pr-1 grid grid-cols-2 gap-2.5 py-1">
+                    {/* Grid com os Decks Enriquecidos */}
+                    <div className="overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5 py-1 scrollbar-thin scrollbar-thumb-arcade-yellow/40">
                       {availablePacks.map((p) => {
                         const t = getPackTheme(p.slug);
                         const isExcl = isPackExclusive(p);
                         const isSelected = selectedPack === p.slug;
+                        const styleInfo = getPackStyleInfo(p.slug);
+                        const ovr = packOvrMap[p.slug] ?? 84;
+
                         return (
-                          <button
+                          <div
                             key={p.slug}
-                            type="button"
                             onClick={() => {
-                              sound.playAttrSelect();
-                              setSelectedPack(p.slug);
-                              writeJSON(LS_KEYS.selectedCupPack, p.slug);
-                              setShowPackDrawer(false);
+                              if (!isSelected) {
+                                sound.playAttrSelect();
+                                setSelectedPack(p.slug);
+                                writeJSON(LS_KEYS.selectedCupPack, p.slug);
+                                setShowPackDrawer(false);
+                              }
                             }}
-                            className={`p-3 rounded-xl border-2 text-left transition-all relative flex flex-col justify-between cursor-pointer active:scale-95 ${
+                            className={`p-3.5 sm:p-4 rounded-2xl border-3 text-left transition-all relative flex flex-col justify-between shadow-lg cursor-pointer ${
                               isSelected
-                                ? "bg-gradient-to-br from-arcade-yellow to-amber-500 text-arcade-dark border-arcade-cream shadow-[0_0_12px_rgba(255,204,0,0.6)] font-bold scale-[1.02]"
-                                : "bg-arcade-blue/70 hover:bg-arcade-blue text-arcade-cream border-arcade-yellow/40 hover:border-arcade-yellow"
+                                ? "bg-gradient-to-br from-slate-900 via-amber-950/40 to-slate-900 border-arcade-yellow shadow-[0_0_16px_rgba(255,204,0,0.35)]"
+                                : "bg-slate-900/90 hover:bg-slate-800/95 border-arcade-yellow/30 hover:border-arcade-yellow hover:shadow-xl hover:scale-[1.01] group"
                             }`}
                           >
-                            {isExcl && (
-                              <span className="absolute -top-2 -right-1 font-arcade text-[7px] bg-amber-500 text-arcade-dark px-1.5 py-0.5 rounded-full font-bold shadow border border-black">
-                                ⭐ EXCLUSIVO
-                              </span>
+                            {/* Topo do Card: Badge de Status e Brasão */}
+                            <div className="flex items-center justify-between mb-2">
+                              {isSelected ? (
+                                <span className="font-arcade text-[8px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-black tracking-wider shadow flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                  🟢 ATIVO
+                                </span>
+                              ) : isExcl ? (
+                                <span className="font-arcade text-[7.5px] bg-amber-500 text-arcade-dark px-2 py-0.5 rounded-full font-bold shadow border border-black">
+                                  ⭐ EXCLUSIVO
+                                </span>
+                              ) : (
+                                <span className="font-arcade text-[7.5px] text-arcade-cream/50 bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
+                                  DISPONÍVEL
+                                </span>
+                              )}
+
+                              <div className="w-7 h-7 rounded-lg bg-black/60 border border-arcade-yellow/40 flex items-center justify-center font-arcade text-[10px] text-arcade-yellow font-bold shadow-inner shrink-0">
+                                {t.badge ?? "90"}
+                              </div>
+                            </div>
+
+                            {/* Nome do Deck (sem texto cortado por ..., quebra em 2 linhas naturais) */}
+                            <div className="flex items-start gap-1.5 mb-2.5">
+                              <span className="text-xl leading-tight shrink-0 mt-0.5">{styleInfo.flag}</span>
+                              <h4 className="font-arcade text-xs sm:text-sm text-arcade-cream font-bold leading-snug line-clamp-2">
+                                {p.name}
+                              </h4>
+                            </div>
+
+                            {/* Metadados: Força Média (OVR) e Estilo Tático */}
+                            <div className="bg-black/55 border border-white/10 rounded-xl p-2.5 mb-3 flex flex-col gap-1 shadow-inner">
+                              <div className="flex items-center justify-between">
+                                <span className="font-arcade text-[7.5px] text-arcade-cream/70 uppercase">FORÇA:</span>
+                                <span className="font-arcade text-[10px] text-arcade-yellow font-black">
+                                  {ovr} OVR
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-arcade text-[7.5px] text-arcade-cream/70 uppercase shrink-0">ESTILO:</span>
+                                <span className="font-body text-[10px] text-emerald-300 font-bold truncate text-right">
+                                  {styleInfo.style}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Botão de Ação: SELECIONADO ou ESCALAR ESTE */}
+                            {isSelected ? (
+                              <div className="w-full py-2 rounded-xl bg-gradient-to-r from-arcade-yellow via-amber-400 to-amber-500 text-arcade-dark font-arcade text-[9px] sm:text-[9.5px] font-black text-center shadow border-2 border-arcade-cream flex items-center justify-center gap-1.5 select-none">
+                                <span>✓</span>
+                                <span>SELECIONADO</span>
+                              </div>
+                            ) : (
+                              <div className="w-full py-2 rounded-xl bg-arcade-blue group-hover:bg-arcade-yellow text-arcade-cream group-hover:text-arcade-dark font-arcade text-[9px] sm:text-[9.5px] font-bold text-center transition-all border-2 border-arcade-yellow/60 group-hover:border-arcade-cream shadow flex items-center justify-center gap-1.5">
+                                <span className="group-hover:translate-x-0.5 transition-transform">⚽</span>
+                                <span>ESCALAR ESTE</span>
+                              </div>
                             )}
-                            <div className="flex items-center justify-between w-full mb-1">
-                              <span className="font-arcade text-xs">{t.badge ?? "90"}</span>
-                              {isSelected && <span className="text-xs">✓ ATIVO</span>}
-                            </div>
-                            <div className="font-arcade text-[10px] truncate max-w-full">
-                              {p.name}
-                            </div>
-                          </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -1063,9 +1343,6 @@ export function StartScreen({
           )}
         </div>
       </main>
-
-      {/* 2. RADINHO RETRÔ FLUTUANTE (Walkman Esportivo Amarelo Anos 90 - Canto Inferior Direito) */}
-      <RetroBoombox floating />
     </div>
   );
 }

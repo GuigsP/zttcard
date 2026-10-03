@@ -290,7 +290,8 @@ export function CardsTab({ cards, packs, onEdit, onDelete, onNewInPack, onPackFi
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {rows.map((c) => {
-                const primaryPack = packs.find((p) => (c.pack_ids ?? []).includes(p.id) || (c.pack_ids ?? []).includes(p.slug));
+                const primaryPack = packs.find((p) => (c.pack_ids ?? []).includes(p.id) || (c.pack_ids ?? []).includes(p.slug))
+                  ?? (c.card_number === 272 || c.card_number === 273 ? packs.find((p) => p.slug === "copa-02" || p.id === "150e5ef0-d84b-4d2e-8c81-0b514dcd7884") : undefined);
                 const theme = getPackTheme(primaryPack?.slug ?? c.pack_ids?.[0]);
 
                 const cardObj = {
@@ -386,7 +387,8 @@ export function CardsTab({ cards, packs, onEdit, onDelete, onNewInPack, onPackFi
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {rows.map((c) => {
-                  const primaryPack = packs.find((p) => (c.pack_ids ?? []).includes(p.id) || (c.pack_ids ?? []).includes(p.slug));
+                  const primaryPack = packs.find((p) => (c.pack_ids ?? []).includes(p.id) || (c.pack_ids ?? []).includes(p.slug))
+                    ?? (c.card_number === 272 || c.card_number === 273 ? packs.find((p) => p.slug === "copa-02" || p.id === "150e5ef0-d84b-4d2e-8c81-0b514dcd7884") : undefined);
                   const theme = getPackTheme(primaryPack?.slug);
 
                   return (

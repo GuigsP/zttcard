@@ -1,0 +1,15 @@
+===================================================================
+📻 98FM — RÁDIO FOOTBALL PRO PERFORMANCE
+===================================================================
+Estilo Musical: Eletrônica, House e Eurodance 90s (Vibe comercial de chuteira e aquecimento de pré-jogo)
+
+Coloque suas músicas (.mp3) aqui nomeadas como:
+1.mp3
+2.mp3
+3.mp3
+4.mp3
+5.mp3
+...
+
+O Walkman/Rádio toca as faixas em sequência contínua com sensação de rádio ao vivo!
+Se a pasta estiver vazia, o jogo usa a trilha procedural synthwave.
