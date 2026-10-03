@@ -13,6 +13,7 @@ type Props = {
   chooser: "P" | "AI";
   difficulty: Difficulty;
   onExit: () => void;
+  arenaTitle?: string;
 };
 
 export function UnifiedMatchHeader({
@@ -25,6 +26,7 @@ export function UnifiedMatchHeader({
   chooser,
   difficulty,
   onExit,
+  arenaTitle,
 }: Props) {
   const [muted, setMuted] = useState(() => sound.isMuted());
 
@@ -87,6 +89,13 @@ export function UnifiedMatchHeader({
           <span className="text-arcade-yellow">POS:</span>
           <span>{posScore.p} × {posScore.ai}</span>
         </div>
+
+        {arenaTitle && (
+          <div className="hidden lg:flex items-center gap-1 font-arcade text-[8.5px] bg-arcade-blue/60 text-emerald-300 border border-emerald-400/50 px-2 py-1 rounded shadow-xs">
+            <span>📍</span>
+            <span className="truncate max-w-[140px] uppercase">{arenaTitle}</span>
+          </div>
+        )}
 
         <div className="hidden md:block font-arcade text-[9px] bg-arcade-cream text-arcade-dark px-2 py-1 border border-arcade-dark">
           {DIFFICULTY_LABELS[difficulty]}

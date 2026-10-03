@@ -644,13 +644,13 @@ export function StartScreen({
                     {/* Topo da Arena: Título + Nível do Treinador */}
                     <div className="flex items-center justify-between mb-3 relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">🏟️</span>
+                        <span className="text-2xl">{playerLevel.level === 1 ? "🏡" : "🏟️"}</span>
                         <div>
                           <div className="font-arcade text-[8px] sm:text-[9px] text-emerald-400 tracking-widest uppercase">
-                            ARENA DE DUELO RETRÔ
+                            {playerLevel.chapter} · {playerLevel.category}
                           </div>
-                          <div className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight">
-                            ESTÁDIO DOS ANOS 90
+                          <div className="font-display text-sm sm:text-base text-arcade-cream font-bold leading-tight uppercase">
+                            {playerLevel.title}
                           </div>
                         </div>
                       </div>
@@ -660,34 +660,49 @@ export function StartScreen({
                         <span className="text-sm">⭐</span>
                         <div className="text-right">
                           <div className="font-arcade text-[9px] text-arcade-yellow font-bold leading-none">
-                            NV. {playerLevel.level}
+                            NV. {playerLevel.level} / 30
                           </div>
-                          <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[90px] truncate">
+                          <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[95px] truncate">
                             {playerLevel.title}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Diorama / Gramado Estilizado com Microcopy Raiz */}
-                    <div className="w-full bg-gradient-to-b from-emerald-800 to-emerald-950 rounded-xl p-3.5 border-2 border-emerald-500/40 relative flex flex-col items-center justify-center my-1 shadow-inner overflow-hidden">
-                      {/* Linhas do Campo de Futebol */}
-                      <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-px bg-white/20 pointer-events-none" />
-                      <div className="absolute w-16 h-16 rounded-full border border-white/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 border-b border-x border-white/20 pointer-events-none" />
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-5 border-t border-x border-white/20 pointer-events-none" />
+                    {/* Diorama / Gramado Estilizado ou Imagem Oficial da Arena (Ex: Quintal de Casa) */}
+                    <div className="w-full bg-gradient-to-b from-emerald-800 to-emerald-950 rounded-xl p-3.5 border-2 border-emerald-500/40 relative flex flex-col items-center justify-center my-1 shadow-inner overflow-hidden min-h-[110px]">
+                      {playerLevel.arenaImage ? (
+                        <>
+                          <img
+                            src={playerLevel.arenaImage}
+                            alt={playerLevel.title}
+                            className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.72] contrast-[1.12]"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-slate-950/50" />
+                        </>
+                      ) : (
+                        <>
+                          {/* Linhas do Campo de Futebol */}
+                          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-px bg-white/20 pointer-events-none" />
+                          <div className="absolute w-16 h-16 rounded-full border border-white/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 border-b border-x border-white/20 pointer-events-none" />
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-5 border-t border-x border-white/20 pointer-events-none" />
+                        </>
+                      )}
 
                       {/* Centro do Campo com Bola e Microcopy Raiz */}
-                      <div className="relative z-10 flex flex-col items-center text-center py-2">
-                        <div className="w-12 h-12 rounded-full bg-black/40 border-2 border-arcade-yellow flex items-center justify-center text-2xl shadow-lg mb-1 animate-pulse">
-                          ⚽
+                      <div className="relative z-10 flex flex-col items-center text-center py-1">
+                        <div className="w-10 h-10 rounded-full bg-black/60 border-2 border-arcade-yellow flex items-center justify-center text-xl shadow-lg mb-1 animate-pulse">
+                          {playerLevel.level === 1 ? "🏡" : "⚽"}
                         </div>
-                        <div className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold drop-shadow tracking-wider">
-                          {playMode === "solo" ? "DISPUTA SOLO VS IA" : "DUELO MULTIPLAYER 1X1"}
+                        <div className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold drop-shadow tracking-wider uppercase">
+                          {playerLevel.title}
                         </div>
-                        <div className="font-body text-xs text-arcade-cream font-medium max-w-sm mt-1">
+                        <div className="font-body text-xs text-arcade-cream font-medium max-w-sm mt-0.5 drop-shadow">
                           {playMode === "solo"
-                            ? "Enfrente a máquina no clássico e fature seu conto!"
+                            ? (playerLevel.level === 1
+                                ? "Partida no quintal entre chinelos Havaianas. Fature seu conto!"
+                                : "Enfrente a máquina no clássico e fature seu conto!")
                             : "Desafie um amigo ao vivo com código de sala e Traps!"}
                         </div>
                       </div>

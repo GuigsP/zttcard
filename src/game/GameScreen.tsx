@@ -26,6 +26,7 @@ import { sound } from "./audio";
 
 import { MobileNavDock, type LobbyScreen } from "./components/MobileNavDock";
 import { RetroBoombox } from "./components/RetroBoombox";
+import { getPlayerLevel } from "./playerLevel";
 
 type Screen = "start" | "playing" | "end" | "matchmaking" | "album" | "shop" | "trades" | "carteira";
 
@@ -251,20 +252,38 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
     writeJSON(LS_KEYS.trapsTutorialDone, true);
   };
 
+  const playerLevel = getPlayerLevel();
+  const arenaBg = playerLevel.arenaImage;
+
   return (
     <div className="min-h-screen bg-[#070e1b] text-arcade-cream flex flex-col justify-between relative selection:bg-arcade-yellow selection:text-arcade-dark overflow-x-hidden">
-      {/* CAMADA DE FUNDO: ESTÁDIO NOTURNO RETRÔ (ESTRUTURA PRONTA PARA A ILUSTRAÇÃO DO NANABANANA) */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        {/* Iluminação do Gramado Central */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_50%_35%,rgba(13,60,32,0.48),rgba(5,13,24,0.98))]" />
-        {/* Holofote Superior Esquerdo do Estádio */}
-        <div className="absolute -top-32 -left-32 w-[600px] h-[800px] bg-gradient-to-br from-arcade-yellow/15 via-emerald-400/8 to-transparent blur-3xl transform -rotate-12" />
-        {/* Holofote Superior Direito do Estádio */}
-        <div className="absolute -top-32 -right-32 w-[600px] h-[800px] bg-gradient-to-bl from-cyan-400/12 via-emerald-500/8 to-transparent blur-3xl transform rotate-12" />
-        {/* Textura Retrô de Gramado */}
-        <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#ffd60a_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
-        {/* Vinheta Noturna nas Bordas */}
-        <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.92)]" />
+      {/* CAMADA DE FUNDO: ARENA DO NÍVEL ATUAL (Ex: QUINTAL DE CASA NO NÍVEL 1) */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        {arenaBg ? (
+          <>
+            <img
+              src={arenaBg}
+              alt={playerLevel.title}
+              className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.70] contrast-[1.12]"
+            />
+            {/* Vinheta noturna sutil para os cards e o placar brilharem com contraste perfeito */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/85" />
+            <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.85)]" />
+          </>
+        ) : (
+          <>
+            {/* Iluminação do Gramado Central */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_50%_35%,rgba(13,60,32,0.48),rgba(5,13,24,0.98))]" />
+            {/* Holofote Superior Esquerdo do Estádio */}
+            <div className="absolute -top-32 -left-32 w-[600px] h-[800px] bg-gradient-to-br from-arcade-yellow/15 via-emerald-400/8 to-transparent blur-3xl transform -rotate-12" />
+            {/* Holofote Superior Direito do Estádio */}
+            <div className="absolute -top-32 -right-32 w-[600px] h-[800px] bg-gradient-to-bl from-cyan-400/12 via-emerald-500/8 to-transparent blur-3xl transform rotate-12" />
+            {/* Textura Retrô de Gramado */}
+            <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#ffd60a_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
+            {/* Vinheta Noturna nas Bordas */}
+            <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.92)]" />
+          </>
+        )}
       </div>
 
       <div className="relative z-10 flex flex-col justify-between min-h-screen">
@@ -281,6 +300,7 @@ function GameBoardInner({ difficulty, decks, onEnd, onExit }: Omit<BoardProps, "
             phase={state.phase}
             chooser={state.chooser}
             difficulty={state.difficulty}
+            arenaTitle={playerLevel.title}
             onExit={onExit}
           />
         </div>
