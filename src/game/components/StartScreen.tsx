@@ -660,10 +660,10 @@ export function StartScreen({
                         <span className="text-sm">⭐</span>
                         <div className="text-right">
                           <div className="font-arcade text-[9px] text-arcade-yellow font-bold leading-none">
-                            {playerLevel.stageBadge}
+                            LV. {playerLevel.level}
                           </div>
                           <div className="font-arcade text-[7px] text-arcade-cream/70 uppercase leading-none mt-0.5 max-w-[95px] truncate">
-                            {playerLevel.title}
+                            TREINADOR
                           </div>
                         </div>
                       </div>
@@ -690,13 +690,10 @@ export function StartScreen({
                         </>
                       )}
 
-                      {/* Centro do Campo com Bola e Microcopy Raiz */}
+                      {/* Centro do Campo com Bola e Microcopy Raiz Limpa */}
                       <div className="relative z-10 flex flex-col items-center text-center py-1">
                         <div className="w-10 h-10 rounded-full bg-black/60 border-2 border-arcade-yellow flex items-center justify-center text-xl shadow-lg mb-1 animate-pulse">
                           {playerLevel.phase === 1 ? "🏡" : "⚽"}
-                        </div>
-                        <div className="font-arcade text-[10px] sm:text-xs text-arcade-yellow font-bold drop-shadow tracking-wider uppercase">
-                          {playerLevel.stageBadge} — {playerLevel.title}
                         </div>
                         <div className="font-body text-xs text-arcade-cream font-medium max-w-sm mt-0.5 drop-shadow">
                           {playMode === "solo"
@@ -752,9 +749,6 @@ export function StartScreen({
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-arcade text-[8.5px] text-arcade-yellow uppercase font-bold tracking-wider">
                             DIFICULDADE DA IA
-                          </span>
-                          <span className="font-arcade text-[8px] text-arcade-cream/70">
-                            {selectedDifficulty === "EASY" ? "TREINO (IA SOLTA)" : selectedDifficulty === "NORMAL" ? "PADRÃO (EQUILIBRADO)" : "PRO (IA LÊ SUA MÃO)"}
                           </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2">

@@ -26,14 +26,11 @@ export function PlayerHand({
     <div className="w-full max-w-4xl mx-auto mt-1 sm:mt-2 bg-gradient-to-b from-slate-900/90 via-slate-950/95 to-slate-900/90 border-2 border-arcade-yellow/50 p-2 sm:p-4 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden">
       {/* Luz ambiente na bandeja de cartas */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-70" />
-      <div className="font-arcade text-[9px] sm:text-xs text-arcade-cream text-center mb-1.5 sm:mb-3 flex items-center justify-center gap-1.5 sm:gap-2 relative z-10">
-        <span>🃏</span>
-        <span className="text-arcade-yellow font-bold uppercase tracking-wider">SUA MÃO — {POSITION_LABELS[pos]}</span>
-        {phase === "SELECT_CARD" && (
-          <span className="text-arcade-dark bg-arcade-yellow px-1.5 sm:px-2.5 py-0.5 rounded font-black text-[7.5px] sm:text-[9px] shadow-[0_0_8px_rgba(255,214,10,0.8)] animate-pulse">
-            ESCOLHA SEU CRAQUE
-          </span>
-        )}
+      <div className="font-arcade text-[9.5px] sm:text-xs text-center mb-1.5 sm:mb-2.5 flex items-center justify-center gap-1.5 relative z-10">
+        <span className="text-xs">🃏</span>
+        <span className="text-arcade-yellow font-bold uppercase tracking-wider">
+          {POSITION_LABELS[pos]}
+        </span>
       </div>
       <div className="flex gap-1.5 sm:gap-4 justify-center items-center flex-nowrap relative z-10 overflow-x-auto pb-0.5">
         {pHand.map((c) => {

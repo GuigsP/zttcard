@@ -56,19 +56,14 @@ export function DuelArena({
       )}
 
       {state.phase === "SELECT_CARD" && (
-        <div className="bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-900/95 text-arcade-cream border-2 border-arcade-yellow/60 rounded-xl p-3 sm:p-4 shadow-2xl backdrop-blur-md text-center animate-in fade-in w-full max-w-sm">
-          <div className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow mb-1 flex items-center justify-center gap-1.5">
-            <span>⚽</span>
-            <span>ESCOLHA UMA CARTA DA MÃO</span>
-          </div>
-          <div className="font-body text-[11px] sm:text-xs text-arcade-cream/80 leading-snug">
-            Toque em um dos seus craques escalados abaixo para colocar em campo.
-          </div>
-          <div className="font-arcade text-[7.5px] sm:text-[8.5px] text-arcade-yellow/80 mt-1.5 sm:mt-2.5 bg-black/50 border border-arcade-yellow/20 rounded-md py-0.5 sm:py-1 px-2 sm:px-2.5 inline-block">
-            {state.chooser === "P"
-              ? "⭐ Você escolhe o atributo deste lance"
-              : "🤖 A IA vai escolher o atributo deste lance"}
-          </div>
+        <div className="bg-slate-900/90 text-arcade-cream border border-arcade-yellow/50 rounded-lg px-3 py-1.5 shadow-lg backdrop-blur-md text-center animate-in fade-in flex items-center justify-center gap-2">
+          <span className="text-xs animate-bounce">⚽</span>
+          <span className="font-arcade text-[9px] sm:text-[10px] text-arcade-yellow font-bold uppercase tracking-wider">
+            Sua vez: Selecione a carta
+          </span>
+          <span className="font-arcade text-[7.5px] sm:text-[8px] text-arcade-cream/70 bg-black/40 px-1.5 py-0.5 rounded border border-arcade-yellow/20">
+            {state.chooser === "P" ? "Você escolhe lance" : "IA escolhe lance"}
+          </span>
         </div>
       )}
 
