@@ -22,17 +22,12 @@ export function PlayerHandDesktop({
       {/* Luz ambiente na bandeja de cartas */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-arcade-yellow to-transparent opacity-70" />
 
-      {/* Cabeçalho Desktop com Posição e Status */}
-      <div className="font-arcade text-xs text-center mb-3 flex items-center justify-center gap-2 relative z-10">
+      {/* Cabeçalho Desktop com Posição */}
+      <div className="font-arcade text-xs text-center mb-2.5 flex items-center justify-center gap-2 relative z-10">
         <span className="text-sm">🃏</span>
         <span className="text-arcade-yellow font-bold uppercase tracking-wider">
-          SUA MÃO — {POSITION_LABELS[pos]}
+          {POSITION_LABELS[pos]}
         </span>
-        {phase === "SELECT_CARD" && (
-          <span className="text-arcade-dark bg-arcade-yellow px-2 py-0.5 rounded font-black text-[9px] shadow-[0_0_8px_rgba(255,214,10,0.8)] animate-pulse">
-            ESCOLHA SEU CRAQUE
-          </span>
-        )}
       </div>
 
       {/* Cartas em formato Small com espaçamento confortável e efeito de elevação no hover */}

@@ -6,6 +6,7 @@ import {
   TrapSlot,
   DuelActionArea,
 } from "../duel/DuelArenaShared";
+import { QuickBanterBar } from "../duel/QuickBanterBar";
 
 /**
  * 💻 DUEL ARENA DESKTOP (Exclusivo para PC / Monitores Widescreen >= 768px)
@@ -61,17 +62,13 @@ export function DuelArenaDesktop({
             </span>
           </div>
 
-          {state.aiSpeech && (
-            <div className="w-full max-w-[220px] bg-arcade-dark/95 border-2 border-arcade-red text-arcade-cream rounded px-2.5 py-1.5 shadow-arcade text-center relative animate-fade-in">
-              <div className="font-arcade text-[8px] text-arcade-red/90 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-1">
-                <span>💬</span>
-                <span>IA PROVOCADORA</span>
-              </div>
-              <div className="font-body text-[11px] leading-tight text-arcade-cream font-medium">
-                "{state.aiSpeech}"
-              </div>
-            </div>
-          )}
+          {/* Sistema de Resenha & Trash Talk com Respostas Rápidas */}
+          <div className="w-full max-w-[220px]">
+            <QuickBanterBar
+              aiSpeech={state.aiSpeech}
+              onSetAiSpeech={(speech) => dispatch({ type: "SET_AI_SPEECH", speech })}
+            />
+          </div>
 
           <div className="relative group p-2 rounded-2xl bg-black/50 border-2 border-red-500/40 shadow-2xl backdrop-blur-xs flex flex-col items-center">
             <div className="absolute -inset-1 bg-red-600/10 rounded-2xl blur-lg pointer-events-none" />

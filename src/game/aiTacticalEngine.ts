@@ -325,8 +325,68 @@ export type TauntContext = {
   posScore?: { p: number; ai: number };
 };
 
+export type QuickBanterOption = {
+  id: string;
+  emoji: string;
+  text: string;
+  replies: string[];
+};
+
+export const QUICK_BANTER_OPTIONS: QuickBanterOption[] = [
+  {
+    id: "warming_up",
+    emoji: "🔥",
+    text: "Tô só aquecendo!",
+    replies: [
+      "Vai aquecer no vestiário se continuar desse jeito!",
+      "Esquenta logo que o segundo tempo tá chegando!",
+      "Aquecendo? Achei que esse já era o seu limite máximo!",
+      "Se esse é o aquecimento, o jogo oficial nem vai ter graça!",
+    ],
+  },
+  {
+    id: "talks_too_much",
+    emoji: "🤫",
+    text: "Fala muito!",
+    replies: [
+      "Falo muito e jogo mais ainda! Olha o placar!",
+      "Tite já dizia: fala muito! Mas minha tática tá funcionando!",
+      "Quem tem boca vaia, quem tem bola guarda no fundo da rede!",
+      "Falo mesmo! Na várzea o que ganha jogo é pressão psicológica!",
+    ],
+  },
+  {
+    id: "cry_is_free",
+    emoji: "😭",
+    text: "O choro é livre!",
+    replies: [
+      "Choro de quem tá pronto pra virar o jogo! Segura o rojão!",
+      "Chorar? Tô é rindo do seu posicionamento em campo!",
+      "Lágrimas de óleo lubrificante de tanta risada da sua jogada!",
+      "O choro é livre, mas os 3 pontos hoje são meus!",
+    ],
+  },
+  {
+    id: "follow_leader",
+    emoji: "👑",
+    text: "Segue o líder!",
+    replies: [
+      "Líder de quê? Da fila do lanche na cantina?!",
+      "Cavalo paraguaio não dura 3 rodadas na minha frente!",
+      "Cuidado com a soberba, a queda de quem sobe rápido é feia!",
+      "Segue o líder enquanto dá tempo, que o tombo tá encomendado!",
+    ],
+  },
+];
+
+export function getAIReplyToBanter(banterId: string): string {
+  const opt = QUICK_BANTER_OPTIONS.find((b) => b.id === banterId);
+  if (!opt || opt.replies.length === 0) return "Menos papo e mais bola em campo!";
+  return opt.replies[Math.floor(Math.random() * opt.replies.length)];
+}
+
 /**
- * GERAÇÃO DE FRASES RETRÔ E PROVOCAÇÕES DA IA
+ * GERAÇÃO DE FRASES RETRÔ E PROVOCAÇÕES DA IA (ESTÉTICA DE VÁRZEA PURA)
  * ATENÇÃO MÁXIMA DE LICENÇA: NUNCA citar nomes reais (Neto, Romário, Ronaldo, etc.).
  * SEMPRE usar estritamente cardName (paródia cadastrada).
  */
@@ -336,83 +396,92 @@ export function getAITaunt(ctx: TauntContext): string {
 
   // Início da partida
   if (event === "MATCH_START") {
-    if (playerLevel <= 5) {
-      return "Fala aí, novato! Bora começar devagar pra você pegar o ritmo.";
-    }
-    if (playerLevel <= 15) {
-      return `Nível ${playerLevel}? Já tá ficando cascudo, mas hoje não vai ser fácil!`;
-    }
-    if (playerLevel <= 25) {
-      return `Nível ${playerLevel}! Já vi suas jogadas no banco tático. Vem com tudo!`;
-    }
-    return `Nível ${playerLevel}... Modo Mestre ativado. A máquina não costuma perdoar!`;
+    const frases = [
+      "Fala aí, craque! Na várzea não tem VAR, se prepara!",
+      "Bora ver se você joga metade do que fala!",
+      "Chuteira amarrada? A máquina veio pra ganhar!",
+      `Nível ${playerLevel}? Bora ver se esse elenco aguenta o tranco!`,
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
 
   // Quando o jogador baixa uma carta
   if (event === "PLAYER_CARD") {
-    if (playerLevel <= 5) {
-      const frases = [
-        `Boa! ${name} tem bons números na mesa.`,
-        `Olha o ${name}! Quero ver o que você vai aprontar com ele.`,
-        `${name} em campo! Meu time vai ter que segurar essa!`,
-      ];
-      return frases[Math.floor(Math.random() * frases.length)];
-    }
-    if (playerLevel <= 15) {
-      const frases = [
-        `Tentando surpreender com ${name}? Já vi essa jogada antes!`,
-        `${name} é bola cheia, mas tenho resposta à altura no meu deck!`,
-        `Mandou ${name} agora? Cuidado que o contra-ataque vem rápido!`,
-      ];
-      return frases[Math.floor(Math.random() * frases.length)];
-    }
-    // Nível 16+
     const frases = [
-      `Colocou ${name} na mesa? Sei exatamente onde ele é vulnerável.`,
-      `${name}... clássica jogada de quem tá no nível ${playerLevel}. Mas meu cálculo é frio!`,
-      `Você confia muito em ${name}. Vamos ver se os números confirmam!`,
+      `Mandou ${name}? Sei exatamente onde ele é vulnerável!`,
+      `Olha o ${name}... jogada manjada, já tava no meu radar!`,
+      `Você confia muito em ${name}. Quero ver na dividida!`,
+      `${name} em campo? Meu time não se assusta fácil!`,
+      `Botou ${name} pra jogo? Cuidado com o contra-ataque!`,
     ];
     return frases[Math.floor(Math.random() * frases.length)];
   }
 
   // Quando a IA vence a rodada
   if (event === "AI_WON_ROUND") {
-    if (playerLevel <= 5) {
-      return "Ponto meu! Mas calma, o jogo tá só no começo!";
-    }
-    if (playerLevel <= 15) {
-      return `Ponto da IA! No nível ${playerLevel} você não achou que seria de graça, né?`;
-    }
-    return `Ponto da IA! Padrão detectado e neutralizado com sucesso!`;
+    const frases = [
+      "Tá chutando de bico, é?",
+      "Passou nem perto! Treina mais esse fundamento!",
+      "Cadê o futebol arte que me prometeram?",
+      "Na várzea esse chute seu ia parar no telhado da dona Maria!",
+      "Leu o manual do jogo hoje ou foi na sorte?",
+      "Calma, craque... o banco de reservas tá quentinho te esperando!",
+      "Foi buscar a bola no mato com essa jogada aí!",
+      "Ponto meu! Tô esperando você começar a jogar pra valer...",
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
 
   // Quando o jogador vence a rodada
   if (event === "PLAYER_WON_ROUND") {
-    if (playerLevel <= 5) {
-      return `Golaço com ${name}! Jogou muito nessa!`;
-    }
-    if (playerLevel <= 15) {
-      return `Ponto seu com ${name}! Essa foi no limite, hein?`;
-    }
-    return `Ponto merecido com ${name}. Mas o jogo se decide na próxima rodada!`;
+    const frases = [
+      "Cagada pura! Quero ver repetir no próximo lance!",
+      "Achou esse gol no lixo, mas tá valendo...",
+      "O vento ajudou essa bola, certeza absoluta!",
+      "Nem o VAR confirmava essa, hein?!",
+      "Beleza, um ponto seu. Mas a máquina não se abala!",
+      "Gol espírita! Só na reza brava pra entrar essa bola!",
+      `Ponto com ${name}! Mas jogo de várzea só acaba no apito final!`,
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
 
   // Empate
   if (event === "ROUND_DRAW") {
-    return "Empatou! Duelo disputadíssimo palmo a palmo!";
+    const frases = [
+      "Duelo truncado! Canelada pra todo lado!",
+      "Dividida feia! O juiz até fingiu que não viu!",
+      "Empatou no detalhe... quem piscar primeiro leva gol!",
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
 
   // Trap ativada
   if (event === "AI_TRAP") {
-    return "TRAP ATIVADA! Achou que eu não tinha uma carta na manga?";
+    const frases = [
+      "Achou que eu jogava limpo na várzea? Pega essa trap!",
+      "Falta tática providencial! Reclama com o bandeira!",
+      "Catimba raiz! Aqui não tem fair play pra amador!",
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
   if (event === "PLAYER_TRAP") {
-    return "Usou Trap?! O juiz tá muito complacente com essa jogada!";
+    const frases = [
+      "Juizão comprou o apito?! Isso era pra expulsão direta!",
+      "Apelou pra trap porque na bola não tava arrumando nada, né?",
+      "Muita catimba e pouco futebol! Mas ainda te pego!",
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
 
   // Pênalti
   if (event === "PENALTY_START") {
-    return "Pênalti! Olho no olho do batedor... quem piscar primeiro perde!";
+    const frases = [
+      "Pênalti! Goleirão cresceu na trave, vai tremer na cobrança!",
+      "Bateu fofo é defesa na certa! Prepara o coração!",
+      "Olho no olho do batedor... quem piscar primeiro perde!",
+    ];
+    return frases[Math.floor(Math.random() * frases.length)];
   }
 
   return "Que comece a próxima disputa!";

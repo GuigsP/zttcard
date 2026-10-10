@@ -6,6 +6,7 @@ import {
   TrapSlot,
   DuelActionArea,
 } from "../duel/DuelArenaShared";
+import { QuickBanterBar } from "../duel/QuickBanterBar";
 
 /**
  * 📱 DUEL ARENA MOBILE (Exclusivo para Smartphone / Telas Verticais < 768px)
@@ -42,14 +43,12 @@ export function DuelArenaMobile({
 
   return (
     <div className="w-full max-w-sm mx-auto px-1 py-1 flex flex-col items-center gap-2">
-      {/* Provocação da IA se houver */}
-      {state.aiSpeech && (
-        <div className="w-full max-w-[320px] bg-arcade-dark/95 border border-arcade-red text-arcade-cream rounded-lg px-2 py-1 shadow-md text-center animate-fade-in">
-          <span className="font-body text-[10px] leading-tight text-arcade-cream font-medium">
-            🤖 "{state.aiSpeech}"
-          </span>
-        </div>
-      )}
+      {/* Sistema de Resenha & Trash Talk com Respostas Rápidas */}
+      <QuickBanterBar
+        aiSpeech={state.aiSpeech}
+        onSetAiSpeech={(speech) => dispatch({ type: "SET_AI_SPEECH", speech })}
+        compact
+      />
 
       {/* Linha de Duelo: IA (Esquerda) vs VOCÊ (Direita) */}
       <div className="w-full flex items-center justify-between gap-2 max-w-[370px]">
