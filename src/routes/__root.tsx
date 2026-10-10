@@ -112,28 +112,40 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Zero to Top Card — Duelo Retrô de Cartas" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { title: "Zero to Top Card — Duelo Retrô de Futebol" },
       {
         name: "description",
         content:
-          "Jogo de cartas de futebol retrô por turnos. 11 posições, traps secretas e nomes nostálgicos como Ronieldo, Reymar e Roberto Larcos.",
+          "Duelo retrô de cartas de futebol por turnos. Escolha seus craques nostálgicos, ative traps surpresas e dispute o título da várzea ao profissional!",
       },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Zero to Top Card — Duelo Retrô de Cartas" },
+      { name: "theme-color", content: "#070e1b" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "ZTT Card" },
+      { property: "og:title", content: "Zero to Top Card — Duelo Retrô de Futebol" },
       {
         property: "og:description",
         content:
-          "Jogo de cartas de futebol retrô por turnos. 11 posições, traps secretas e nomes nostálgicos como Ronieldo, Reymar e Roberto Larcos.",
+          "Duelo retrô de cartas de futebol por turnos. Escolha seus craques nostálgicos, ative traps surpresas e dispute o título da várzea ao profissional!",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Zero to Top Card" },
+      { property: "og:image", content: "https://zttcard.pages.dev/og-image.jpg" },
+      { property: "og:image:width", content: "1280" },
+      { property: "og:image:height", content: "720" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Zero to Top Card — Duelo Retrô de Cartas" },
-      { name: "twitter:description", content: "Jogo de cartas de futebol retrô por turnos. 11 posições, traps secretas e nomes nostálgicos como Ronieldo, Reymar e Roberto Larcos." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f1f4b2ff-fee7-44be-89b4-e44f86aa7b29/id-preview-7caa9fc9--143ce972-271d-4531-9727-02bb3fc85dea.lovable.app-1783896254904.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f1f4b2ff-fee7-44be-89b4-e44f86aa7b29/id-preview-7caa9fc9--143ce972-271d-4531-9727-02bb3fc85dea.lovable.app-1783896254904.png" },
+      { name: "twitter:title", content: "Zero to Top Card — Duelo Retrô de Futebol" },
+      {
+        name: "twitter:description",
+        content:
+          "Duelo retrô de cartas de futebol por turnos. Escolha seus craques nostálgicos, ative traps surpresas e dispute o título da várzea ao profissional!",
+      },
+      { name: "twitter:image", content: "https://zttcard.pages.dev/og-image.jpg" },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -156,7 +168,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>

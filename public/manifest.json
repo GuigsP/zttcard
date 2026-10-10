@@ -1,0 +1,24 @@
+{
+  "name": "Zero to Top Card",
+  "short_name": "ZTT Card",
+  "description": "Jogo de cartas de futebol retrô por turnos. 11 posições, traps secretas e nostalgia pura.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070e1b",
+  "theme_color": "#070e1b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

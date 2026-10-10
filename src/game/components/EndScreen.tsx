@@ -3,6 +3,7 @@ import type { LastResult, PositionResult, RoundLog } from "../types";
 import { ATTR_LABELS, DIFFICULTY_LABELS, POSITION_LABELS, TRAP_LABELS } from "../types";
 import { getPackTheme } from "../packThemes";
 import { sound } from "../audio";
+import { toast } from "sonner";
 
 type Props = {
   result: LastResult;
@@ -15,12 +16,37 @@ export function EndScreen({ result, cupPackSlug, onReplay, onChangeDifficulty }:
   const { goals, difficulty, positions } = result;
   const win = goals.p > goals.ai;
   const draw = goals.p === goals.ai;
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (win) {
       sound.playVictory();
     }
   }, [win]);
+
+  const gameUrl = typeof window !== "undefined" ? window.location.origin : "https://zttcard.pages.dev";
+  const shareText = win
+    ? `🏆 Meti ${goals.p} x ${goals.ai} na IA no Zero To Top Card! Consegue bater meu placar? Joga aí: ${gameUrl}`
+    : draw
+      ? `⚔️ Empatei em ${goals.p} x ${goals.ai} contra a IA no Zero To Top Card! Consegue vencer? Joga aí: ${gameUrl}`
+      : `⚽ Joguei contra a IA no Zero To Top Card e o placar foi ${goals.p} x ${goals.ai}! Consegue vencer a máquina? Joga aí: ${gameUrl}`;
+
+  const handleShareWhatsApp = () => {
+    sound.playCardFlip();
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCopyLink = () => {
+    sound.playCardFlip();
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(shareText).then(() => {
+        setCopied(true);
+        toast.success("Placar e link copiados! Cole no WhatsApp ou redes sociais.");
+        setTimeout(() => setCopied(false), 2500);
+      }).catch(() => {});
+    }
+  };
 
   const theme = getPackTheme(cupPackSlug);
   const cupLine = draw
@@ -50,6 +76,37 @@ export function EndScreen({ result, cupPackSlug, onReplay, onChangeDifficulty }:
             {goals.p} × {goals.ai}
           </div>
           <div className={`font-display text-3xl ${color}`}>{title}</div>
+        </div>
+
+        {/* 🚀 BANNER DE COMPARTILHAMENTO VIRAL (WHATSAPP + LINK) */}
+        <div className="mt-5 bg-gradient-to-r from-emerald-950/15 via-emerald-800/10 to-emerald-950/15 border-2 border-emerald-600/50 rounded-xl p-3.5 text-center">
+          <div className="font-arcade text-[9px] sm:text-[10px] text-emerald-900 font-bold mb-1 uppercase tracking-wider flex items-center justify-center gap-1.5">
+            <span>🔥</span>
+            <span>DESAFIE SEUS AMIGOS</span>
+          </div>
+          <div className="font-body text-xs sm:text-sm text-slate-800 font-semibold mb-3">
+            {win
+              ? `Você meteu ${goals.p} × ${goals.ai} na IA! Mande para a galera tentar bater o seu placar.`
+              : `Compartilhe o resultado e veja se seus amigos conseguem vencer a máquina!`}
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="w-full sm:w-auto font-arcade text-xs px-4 py-2.5 bg-[#25D366] hover:bg-[#1ebd59] text-white border-2 border-slate-900 rounded-lg shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+            >
+              <span>📲</span>
+              <span>DESAFIAR NO WHATSAPP</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="w-full sm:w-auto font-arcade text-xs px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-arcade-yellow border-2 border-slate-900 rounded-lg shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            >
+              <span>{copied ? "✓" : "📋"}</span>
+              <span>{copied ? "COPIADO!" : "COPIAR LINK & PLACAR"}</span>
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 border-2 border-arcade-dark bg-arcade-blue/5 p-3 max-h-[420px] overflow-auto">
