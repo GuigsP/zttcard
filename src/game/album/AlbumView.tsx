@@ -377,12 +377,12 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
 
       {/* ── 4. ÁLBUM ABERTO: PÁGINA DUPLA ── */}
       {(() => {
-        const PAGE_SIZE = 6;
+        const PAGE_SIZE = 12;
         const pageCount = Math.max(1, Math.ceil(processedCards.length / PAGE_SIZE));
         const safePage = Math.min(currentPage, pageCount - 1);
         const visibleCards = processedCards.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
-        const leftCards = visibleCards.slice(0, 3);
-        const rightCards = visibleCards.slice(3, 6);
+        const leftCards = visibleCards.slice(0, 6);
+        const rightCards = visibleCards.slice(6, 12);
         const renderSlot = (card: CatalogCard | undefined, slotIndex: number) => {
           const slotNumber = card?.slotNumber ?? (safePage * PAGE_SIZE + slotIndex + 1);
           if (!card) {
