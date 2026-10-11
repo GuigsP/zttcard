@@ -103,6 +103,76 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
     setSelectedCard(card);
   };
 
+  if (!activeAlbumSlug) {
+    const sortedPacks = [...availablePacks].sort((a, b) => a.sort_order - b.sort_order);
+    const getPackCards = (slug: string) => catalog.filter((card) =>
+      cardBelongsToPack(card as any, slug, availablePacks) ||
+      (card.pack_ids ?? []).includes(slug) ||
+      card.collection === slug
+    );
+    const openAlbum = (slug: string) => {
+      sound.playCardFlip();
+      setActiveAlbumSlug(slug);
+      setPackFilter(slug);
+      setStatusFilter("all");
+      setPosFilter("ALL");
+      setSortOption("number");
+    };
+
+    return (
+      <div className="relative min-h-screen min-h-[100dvh] overflow-hidden bg-[#07101f] px-4 py-5 pb-32 text-arcade-cream sm:px-7 md:px-10 md:pb-12">
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_-10%,rgba(29,78,216,.18),transparent_70%)]" />
+        <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.25)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.25)_1px,transparent_1px)] [background-size:32px_32px]" />
+        <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-4 border-b border-white/10 pb-5">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => { sound.playAttrSelect(); onBack(); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-lg text-slate-300 transition hover:border-arcade-yellow/50 hover:text-arcade-yellow" aria-label="Voltar ao menu">←</button>
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-300">Arquivo de colecionador</p><h1 className="mt-1 font-display text-3xl font-black uppercase leading-none tracking-wide text-white sm:text-4xl">Sua estante</h1></div>
+          </div>
+          <button type="button" onClick={() => { sound.playAttrSelect(); onOpenShop(); }} className="inline-flex items-center gap-2 rounded-xl bg-arcade-yellow px-3 py-2.5 text-[10px] font-black uppercase tracking-wide text-[#101522] transition hover:bg-yellow-300 sm:px-4 sm:text-xs"><span>＋</span><span className="hidden sm:inline">Buscar figurinhas</span><span className="sm:hidden">Banca</span></button>
+        </header>
+        <main className="relative z-10 mx-auto w-full max-w-6xl py-7 sm:py-9">
+          <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <p className="text-xs leading-relaxed text-slate-400 sm:text-sm">Cada edição conta uma história. Abra um álbum e continue preenchendo suas páginas.</p>
+            <div className="flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 sm:self-auto"><span className="text-base">📚</span><span><strong className="text-white">{sortedPacks.length}</strong> {sortedPacks.length === 1 ? "álbum na estante" : "álbuns na estante"}</span></div>
+          </div>
+          {sortedPacks.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center"><div className="text-4xl">📚</div><h2 className="mt-4 font-display text-2xl font-bold uppercase text-white">Sua estante está esperando</h2><p className="mt-2 text-sm text-slate-400">As coleções aparecerão aqui assim que estiverem disponíveis.</p></div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedPacks.map((pack, index) => {
+                const packCards = getPackCards(pack.slug);
+                const owned = packCards.filter((card) => (inventory[card.id] ?? 0) >= 1).length;
+                const total = packCards.length;
+                const percent = total > 0 ? Math.round((owned / total) * 100) : 0;
+                const theme = getPackTheme(pack.slug);
+                const yearMatch = pack.name.match(/(?:19|20)\d{2}|\b\d{2}\b/);
+                const year = yearMatch?.[0] ?? String(90 + index);
+                const accent = theme?.accent || "#ffd60a";
+                const isSpecial = !pack.is_active;
+                return (
+                  <button key={pack.id} type="button" onClick={() => openAlbum(pack.slug)} className="group relative flex min-h-[238px] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1728] p-3 text-left shadow-[0_18px_45px_rgba(0,0,0,.22)] transition duration-200 hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_24px_55px_rgba(0,0,0,.38)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcade-yellow">
+                    <div className="relative flex w-[43%] min-w-[118px] max-w-[160px] shrink-0 flex-col justify-between overflow-hidden rounded-lg border border-black/40 p-3 shadow-[5px_5px_0_rgba(0,0,0,.35)]" style={{ background: `linear-gradient(155deg, ${theme?.topBg || "#172554"} 0%, #081222 68%, ${accent}33 100%)` }}>
+                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(135deg, transparent 0 9px, rgba(255,255,255,.2) 9px 10px)" }} />
+                      <div className="absolute left-0 top-0 h-full w-2 border-r border-white/10 bg-black/25" />
+                      <div className="relative pl-1"><span className="block text-[8px] font-black uppercase tracking-[.2em]" style={{ color: accent }}>ZERO TO TOP</span><span className="mt-1 block font-display text-4xl font-black leading-none text-white drop-shadow sm:text-5xl">{year}</span></div>
+                      <div className="relative flex flex-col items-center py-1"><span className="text-4xl drop-shadow-[0_4px_8px_rgba(0,0,0,.7)] transition duration-200 group-hover:scale-110 sm:text-5xl">{pack.slug.includes("copa") ? "🏆" : "⚽"}</span><span className="mt-2 text-center font-display text-sm font-black uppercase leading-tight text-white sm:text-base">{pack.name}</span></div>
+                      <div className="relative flex items-center justify-between border-t border-white/20 pt-2"><span className="text-[7px] font-bold uppercase tracking-wider text-white/65">Coleção</span><span className="text-[10px] font-black" style={{ color: accent }}>ZTT</span></div>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col justify-between py-1 pl-4 pr-1">
+                      <div><div className="flex items-start justify-between gap-2"><span className="text-[9px] font-bold uppercase tracking-[.18em] text-slate-500">Álbum {String(index + 1).padStart(2, "0")}</span>{isSpecial && <span className="rounded-full border border-purple-300/20 bg-purple-300/10 px-2 py-1 text-[8px] font-bold text-purple-200">Especial</span>}</div><h2 className="mt-2 font-display text-xl font-black uppercase leading-tight text-white transition group-hover:text-arcade-yellow sm:text-2xl">{pack.name}</h2><p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">{pack.description || "Uma coleção para descobrir e completar."}</p></div>
+                      <div className="mt-4"><div className="mb-2 flex items-center justify-between gap-2 text-[10px]"><span className="font-semibold text-slate-300">{owned} de {total} figurinhas</span><span className="font-black" style={{ color: accent }}>{percent}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-black/50"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${percent}%`, backgroundColor: accent }} /></div><div className="mt-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-wide text-slate-500 transition group-hover:text-white"><span>{percent === 100 && total > 0 ? "Coleção completa" : owned === 0 ? "Comece a coleção" : "Continuar álbum"}</span><span className="text-base" style={{ color: accent }}>→</span></div></div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-7 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-xs text-slate-500"><span className="text-lg">💡</span><p>Abra uma edição para consultar suas figurinhas. As repetidas continuam no seu inventário e podem ser trocadas na Pracinha.</p></div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-arcade-blue text-arcade-cream flex flex-col p-3 sm:p-5 md:p-8 pb-32 md:pb-12">
       {/* ── 1. CABEÇALHO DO ÁLBUM & BOTÕES RÁPIDOS ── */}
@@ -117,7 +187,7 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
             }}
             className="font-arcade text-[10px] px-3 py-2 bg-arcade-dark text-arcade-yellow border-2 border-arcade-yellow hover:bg-arcade-red hover:text-white transition-colors cursor-pointer active:scale-95 shadow"
           >
-            ← MENU
+            ← ESTANTE
           </button>
           <div className="text-right sm:text-left">
             <h1 className="font-arcade text-lg sm:text-2xl text-arcade-yellow drop-shadow-[2px_2px_0_var(--arcade-dark)] leading-tight">
