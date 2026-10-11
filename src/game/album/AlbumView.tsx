@@ -35,6 +35,7 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
   const [sortOption, setSortOption] = useState<SortOption>("number");
   const [selectedCard, setSelectedCard] = useState<CatalogCard | null>(null);
   const [activeAlbumSlug, setActiveAlbumSlug] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => getCachedPacks());
 
@@ -48,6 +49,8 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
       }
     });
   }, []);
+
+  useEffect(() => { setCurrentPage(0); }, [packFilter, statusFilter, posFilter, sortOption]);
 
   // Statistics for the selected album, or the whole catalog when no album is selected.
   const scopedCards = packFilter === "ALL" ? catalog : catalog.filter((card) =>
@@ -372,134 +375,69 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
 
       </div>
 
-      {/* ── 4. GRID DE CARTAS COMPACTO (3~4 COLUNAS NO MOBILE - ESTILO CLASH ROYALE) ── */}
-      <div className="max-w-6xl w-full mx-auto">
-        {processedCards.length === 0 ? (
-          <div className="w-full bg-arcade-dark/80 border-2 border-dashed border-arcade-yellow/40 rounded-2xl p-8 text-center my-6">
-            <span className="text-4xl">🔍</span>
-            <div className="font-arcade text-sm text-arcade-yellow mt-2">
-              NENHUMA FIGURINHA ENCONTRADA
+      {/* ── 4. ÁLBUM ABERTO: PÁGINA DUPLA ── */}
+      {(() => {
+        const PAGE_SIZE = 6;
+        const pageCount = Math.max(1, Math.ceil(processedCards.length / PAGE_SIZE));
+        const safePage = Math.min(currentPage, pageCount - 1);
+        const visibleCards = processedCards.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+        const leftCards = visibleCards.slice(0, 3);
+        const rightCards = visibleCards.slice(3, 6);
+        const renderSlot = (card: CatalogCard | undefined, slotIndex: number) => {
+          const slotNumber = card?.slotNumber ?? (safePage * PAGE_SIZE + slotIndex + 1);
+          if (!card) {
+            return (
+              <div key={`empty-${slotNumber}`} className="relative flex aspect-[3/4] min-h-0 flex-col items-center justify-center rounded-md border border-dashed border-amber-900/40 bg-black/10 text-amber-950/60">
+                <span className="font-arcade text-[9px]">#{slotNumber}</span>
+                <span className="mt-1 text-lg opacity-40">⚽</span>
+                <span className="mt-1 text-[7px] font-bold uppercase tracking-widest">Espaço livre</span>
+              </div>
+            );
+          }
+          const count = inventory[card.id] ?? 0;
+          const isOwned = count >= 1;
+          const rarity = RARITY_CONFIG[card.rarity];
+          return (
+            <button key={card.id} type="button" onClick={() => handleCardClick(card)} title={isOwned ? `#${card.slotNumber} — ${card.name}` : `#${card.slotNumber} — Figurinha faltando`} className={`relative flex aspect-[3/4] min-h-0 flex-col overflow-hidden rounded-md border p-1 text-center transition duration-200 hover:-translate-y-0.5 active:scale-95 ${isOwned ? "border-amber-700/70 bg-[#10251e] shadow-[0_2px_5px_rgba(0,0,0,.2)]" : "border-dashed border-stone-500/70 bg-stone-900/10 opacity-80 hover:opacity-100"}`} style={isOwned ? { borderColor: rarity.borderColor } : undefined}>
+              <div className="relative z-10 flex items-center justify-between gap-1 text-[8px] font-black text-stone-700"><span>#{card.slotNumber}</span><span>{isOwned ? card.position : "???"}</span></div>
+              {isOwned && card.imageUrl ? <img src={card.imageUrl} alt={card.name} loading="lazy" className="absolute inset-1 h-[calc(100%-2rem)] w-[calc(100%-.5rem)] rounded object-cover object-top opacity-90" /> : null}
+              <div className={`relative z-10 m-auto flex flex-col items-center justify-center ${isOwned ? "text-white" : "text-stone-500"}`}>
+                {!isOwned ? <><span className="text-xl sm:text-2xl">👤</span><span className="mt-1 font-arcade text-[7px]">FALTANDO</span></> : !card.imageUrl ? <span className="text-2xl">👤</span> : null}
+              </div>
+              <div className={`relative z-10 mt-auto rounded-sm px-0.5 py-1 ${isOwned ? "bg-black/75 text-white" : "bg-stone-950/60 text-stone-500"}`}>
+                <span className="block truncate text-[7px] font-black uppercase sm:text-[9px]">{isOwned ? card.name : "Figurinha faltante"}</span>
+                {isOwned && count > 1 ? <span className="text-[7px] font-black text-amber-300">+{count - 1} REP.</span> : null}
+              </div>
+            </button>
+          );
+        };
+        return (
+          <section className="mx-auto w-full max-w-6xl" aria-label="Páginas do álbum">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+              <div><p className="font-arcade text-[10px] text-arcade-yellow">EDIÇÃO ABERTA</p><p className="mt-1 text-[10px] text-arcade-cream/60">Cada espaço numerado guarda uma figurinha da coleção.</p></div>
+              <span className="rounded-full border border-amber-300/30 bg-black/20 px-3 py-1.5 font-arcade text-[9px] text-amber-200">PÁGINAS {safePage * 2 + 1}–{Math.min(safePage * 2 + 2, pageCount * 2)}</span>
             </div>
-            <p className="font-body text-xs text-arcade-cream/70 mt-1">
-              Tente redefinir os filtros de posição ou coleção para ver mais cartas.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-2.5">
-            {processedCards.map((card) => {
-              const count = inventory[card.id] ?? 0;
-              const isOwned = count >= 1;
-              const rConf = RARITY_CONFIG[card.rarity];
-              const t = getPackTheme(card.collection);
-
-              /* CARTA FALTANTE (SILHUETA MISTERIOSA ESTILO CLASH ROYALE) */
-              if (!isOwned) {
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card)}
-                    className="aspect-[1/1.38] bg-slate-950/80 border-2 border-dashed border-slate-700/60 rounded-xl p-1.5 flex flex-col justify-between items-center text-center opacity-75 hover:opacity-100 hover:border-arcade-yellow/60 transition-all cursor-pointer shadow relative group active:scale-95"
-                    title={`#${card.slotNumber} - Figurinha não obtida`}
-                  >
-                    {/* Topo: Número do Slot */}
-                    <div className="w-full flex justify-between items-center px-0.5">
-                      <span className="font-arcade text-[7.5px] text-slate-400">
-                        #{card.slotNumber}
-                      </span>
-                      <span className="font-arcade text-[6.5px] text-slate-500 bg-black/50 px-1 py-0.2 rounded">
-                        {card.position}
-                      </span>
-                    </div>
-
-                    {/* Centro: Ícone de Silhueta / Cadeado */}
-                    <div className="flex flex-col items-center my-auto">
-                      <span className="text-xl sm:text-2xl text-slate-600 group-hover:text-arcade-yellow/70 transition-colors">
-                        🔒
-                      </span>
-                    </div>
-
-                    {/* Base: Rótulo Faltando */}
-                    <div className="w-full bg-black/60 rounded-lg py-0.5 px-1">
-                      <span className="font-arcade text-[7px] text-amber-400/80 block truncate">
-                        FALTANDO
-                      </span>
-                    </div>
+            <div key={safePage} className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-right-3 duration-300 md:grid-cols-2 md:gap-0">
+              {[leftCards, rightCards].map((pageCards, pageSide) => (
+                <div key={pageSide} className={`relative overflow-hidden border-y-4 border-amber-950/70 bg-[#e8d6a8] p-3 shadow-xl sm:p-5 ${pageSide === 0 ? "rounded-t-xl md:rounded-l-xl md:rounded-tr-none border-l-4 md:border-r border-r-amber-950/20" : "rounded-b-xl md:rounded-r-xl md:rounded-bl-none border-r-4 md:border-l-0"}`}>
+                  <div className="pointer-events-none absolute inset-0 opacity-25" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent 0 27px, rgba(101,72,34,.14) 28px 29px)" }} />
+                  <div className="relative mb-3 flex items-center justify-between border-b border-amber-950/25 pb-2"><span className="font-display text-[10px] font-black uppercase tracking-[.2em] text-amber-950/70">{pageSide === 0 ? "Memórias do futebol" : "Lendas da edição"}</span><span className="font-arcade text-[8px] text-amber-950/60">{safePage * 2 + pageSide + 1}</span></div>
+                  <div className="relative grid grid-cols-3 gap-2 sm:gap-3">
+                    {Array.from({ length: 6 }, (_, i) => renderSlot(pageCards[i], pageSide * 6 + i))}
                   </div>
-                );
-              }
-
-              /* CARTA COLADA (ARTE EM DESTAQUE COM MOLDURA RETRÔ) */
-              return (
-                <div
-                  key={card.id}
-                  onClick={() => handleCardClick(card)}
-                  className={`aspect-[1/1.38] rounded-xl border-2 sm:border-3 p-1 flex flex-col justify-between cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-lg relative group overflow-hidden bg-slate-950`}
-                  style={{
-                    borderColor: rConf.borderColor,
-                    boxShadow: card.rarity === "LENDA" ? "0 0 12px rgba(255,214,10,0.5)" : undefined,
-                  }}
-                >
-                  {/* Selo de Duplicatas (+X no topo direito) */}
-                  {count > 1 && (
-                    <div className="absolute top-1 right-1 font-arcade text-[7px] sm:text-[8px] bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-1.5 py-0.2 border border-slate-950 font-black rounded-full shadow-md z-20">
-                      +{count - 1}
-                    </div>
-                  )}
-
-                  {/* Topo da Carta: OVR + Selo da Raridade */}
-                  <div className="w-full flex justify-between items-start z-10">
-                    <div
-                      className="font-arcade text-[8.5px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-lg border border-black shadow text-white leading-none"
-                      style={{ backgroundColor: rConf.badgeBg }}
-                    >
-                      {card.ovr}
-                    </div>
-
-                    {count <= 1 && (
-                      <span className="font-arcade text-[6.5px] sm:text-[7.5px] bg-black/75 px-1 py-0.2 rounded text-white/90 font-bold border border-white/20">
-                        {card.position}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Foto / Imagem do Jogador Centralizada */}
-                  <div className="absolute inset-0 flex items-center justify-center p-1 overflow-hidden pointer-events-none">
-                    {card.imageUrl ? (
-                      <img
-                        src={card.imageUrl}
-                        alt={card.name}
-                        className="w-full h-full object-cover object-top rounded-lg group-hover:scale-105 transition-transform duration-200"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-arcade-blue/40 rounded-lg">
-                        <span className="text-2xl text-arcade-cream/50">👤</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Base da Carta: Gradiente Preto com Nome do Jogador */}
-                  <div className="w-full z-10 mt-auto bg-gradient-to-t from-black via-black/85 to-transparent pt-3 pb-0.5 px-0.5 rounded-b-lg text-center">
-                    <div className="font-arcade text-[7.5px] sm:text-[9px] text-white font-bold truncate uppercase tracking-tight drop-shadow">
-                      {card.name}
-                    </div>
-                    {/* Barra de repetições estilo Clash Royale se tiver cópias */}
-                    {count > 1 ? (
-                      <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden mt-0.5 border border-black">
-                        <div className="bg-amber-400 h-full w-full" />
-                      </div>
-                    ) : (
-                      <div className="font-arcade text-[6px] text-arcade-cream/60 leading-none">
-                        #{card.slotNumber}
-                      </div>
-                    )}
-                  </div>
+                  <div className="relative mt-3 border-t border-amber-950/20 pt-2 text-center font-display text-[9px] italic text-amber-950/50">Zero To Top · Álbum de figurinhas</div>
+                  {pageSide === 0 ? <div className="pointer-events-none absolute right-0 top-0 h-full w-3 bg-gradient-to-l from-amber-950/10 to-transparent" /> : <div className="pointer-events-none absolute left-0 top-0 h-full w-3 bg-gradient-to-r from-amber-950/10 to-transparent" />}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-arcade-yellow/20 bg-arcade-dark/70 p-3">
+              <button type="button" disabled={safePage === 0} onClick={() => { sound.playCardFlip(); setCurrentPage((p) => Math.max(0, p - 1)); }} className="flex items-center gap-2 rounded-lg border border-amber-300/30 bg-black/25 px-3 py-2 font-arcade text-[9px] text-amber-100 transition hover:bg-amber-300/10 disabled:cursor-not-allowed disabled:opacity-30"><span>←</span><span className="hidden sm:inline">PÁGINA ANTERIOR</span><span className="sm:hidden">ANTERIOR</span></button>
+              <div className="text-center"><p className="font-arcade text-[9px] text-arcade-cream">{pageCount === 1 ? "ÚNICA ABERTURA" : `ABERTURA ${safePage + 1} DE ${pageCount}`}</p><p className="mt-1 text-[9px] text-arcade-cream/50">{processedCards.length} figurinhas nesta visualização</p></div>
+              <button type="button" disabled={safePage >= pageCount - 1} onClick={() => { sound.playCardFlip(); setCurrentPage((p) => Math.min(pageCount - 1, p + 1)); }} className="flex items-center gap-2 rounded-lg border border-amber-300/30 bg-black/25 px-3 py-2 font-arcade text-[9px] text-amber-100 transition hover:bg-amber-300/10 disabled:cursor-not-allowed disabled:opacity-30"><span className="hidden sm:inline">PRÓXIMA PÁGINA</span><span className="sm:hidden">PRÓXIMA</span><span>→</span></button>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ── 5. BOTTOM SHEET DE DETALHES DA CARTA (GAVETA INFERIOR) ── */}
       {selectedCard && (
