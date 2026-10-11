@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { getMasterCatalog } from "../economy/cardCatalog";
-import { getPlayerInventory } from "../economy/economyService";
+import { addCardToInventory, addCoins, getPlayerInventory } from "../economy/economyService";
 import type { CatalogCard, CardRarity } from "../economy/economyTypes";
 import { RARITY_CONFIG } from "../economy/economyTypes";
 import { ATTR_LABELS, POSITION_LABELS } from "../types";
@@ -36,6 +36,8 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
   const [selectedCard, setSelectedCard] = useState<CatalogCard | null>(null);
   const [activeAlbumSlug, setActiveAlbumSlug] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [rewardRefresh, setRewardRefresh] = useState(0);
+  const [rewardNotice, setRewardNotice] = useState<string | null>(null);
 
   const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => getCachedPacks());
 
@@ -60,6 +62,41 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
   const totalCards = scopedCards.length || 1;
   const collectedCount = scopedCards.filter((c) => (inventory[c.id] ?? 0) >= 1).length;
   const progressPercent = Math.min(100, Math.max(0, Math.round((collectedCount / totalCards) * 100)));
+  const rewardMilestones = [
+    { percent: 25, title: "Primeiros passos", description: "Chegue a 25% da coleção", coins: 100, card: false },
+    { percent: 50, title: "Meio caminho", description: "Complete metade do álbum", coins: 150, card: true },
+    { percent: 75, title: "Quase lá", description: "Alcance 75% da coleção", coins: 250, card: false },
+    { percent: 100, title: "Álbum completo", description: "Cole todas as figurinhas", coins: 500, card: true },
+  ];
+  const rewardStorageKey = activeAlbumSlug ? `ztt.albumRewards.${activeAlbumSlug}` : "";
+  const claimedRewards: number[] = useMemo(() => {
+    if (!rewardStorageKey || typeof window === "undefined") return [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(rewardStorageKey) || "[]");
+      return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "number") : [];
+    } catch { return []; }
+  }, [rewardStorageKey, rewardRefresh]);
+  const claimMilestone = (milestone: typeof rewardMilestones[number]) => {
+    if (!activeAlbumSlug || claimedRewards.includes(milestone.percent) || progressPercent < milestone.percent) return;
+    addCoins(milestone.coins);
+    let cardRewardName = "";
+    if (milestone.card && scopedCards.length > 0) {
+      const missing = scopedCards.filter((card) => (getPlayerInventory()[card.id] ?? 0) < 1);
+      const pool = missing.length > 0 ? missing : scopedCards;
+      const rewardCard = pool[Math.floor(Math.random() * pool.length)];
+      if (rewardCard) {
+        addCardToInventory(rewardCard.id);
+        cardRewardName = rewardCard.name;
+        setCatalog([...catalog]);
+      }
+    }
+    const nextClaimed = [...claimedRewards, milestone.percent];
+    if (typeof window !== "undefined") window.localStorage.setItem(rewardStorageKey, JSON.stringify(nextClaimed));
+    setRewardRefresh((value) => value + 1);
+    setRewardNotice(`Meta de ${milestone.percent}% resgatada! +${milestone.coins} contos${cardRewardName ? ` e figurinha: ${cardRewardName}` : ""}.`);
+    sound.playCardFlip();
+  };
+
 
   // Filtered & Sorted Cards
   const processedCards = useMemo(() => {
@@ -237,6 +274,29 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
           />
         </div>
       </div>
+
+      {/* ── METAS E RECOMPENSAS EXCLUSIVAS DESTA COLEÇÃO ── */}
+      <section className="mx-auto mb-5 w-full max-w-6xl rounded-2xl border border-amber-300/25 bg-gradient-to-br from-[#151d30] to-[#090f1c] p-4 shadow-lg">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div><p className="font-arcade text-[9px] uppercase tracking-[.2em] text-amber-300">Jornada da coleção</p><h2 className="mt-1 font-display text-xl font-black uppercase text-white">Metas e recompensas</h2></div>
+          <span className="text-[10px] text-slate-400">Cada álbum tem seu próprio progresso</span>
+        </div>
+        {rewardNotice && <div role="status" className="mb-3 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">{rewardNotice}</div>}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {rewardMilestones.map((milestone) => {
+            const claimed = claimedRewards.includes(milestone.percent);
+            const unlocked = progressPercent >= milestone.percent;
+            return <div key={milestone.percent} className={`rounded-xl border p-3 transition ${claimed ? "border-emerald-400/30 bg-emerald-400/[.07]" : unlocked ? "border-amber-300/50 bg-amber-300/[.07]" : "border-white/10 bg-black/20"}`}>
+              <div className="flex items-center justify-between gap-2"><span className="font-arcade text-[10px] text-amber-200">{milestone.percent}%</span><span className="text-sm">{claimed ? "✓" : milestone.card ? "🎴" : "🪙"}</span></div>
+              <p className="mt-2 text-sm font-bold text-white">{milestone.title}</p>
+              <p className="mt-1 min-h-8 text-[10px] leading-relaxed text-slate-400">{milestone.description}</p>
+              <p className="mt-2 text-[10px] font-bold text-amber-200">+{milestone.coins} contos{milestone.card ? " + figurinha" : ""}</p>
+              <button type="button" disabled={!unlocked || claimed} onClick={() => claimMilestone(milestone)} className="mt-3 w-full rounded-lg border border-amber-200/25 px-2 py-2 font-arcade text-[8px] transition hover:bg-amber-200/10 disabled:cursor-not-allowed disabled:opacity-35">{claimed ? "RESGATADA" : unlocked ? "RESGATAR" : `FALTAM ${Math.max(0, milestone.percent - progressPercent)}%`}</button>
+            </div>;
+          })}
+        </div>
+        <p className="mt-3 text-[10px] leading-relaxed text-slate-500">As metas contam figurinhas únicas coladas neste álbum. Recompensas ficam salvas por coleção; cartas bônus priorizam uma figurinha que ainda falta.</p>
+      </section>
 
       {/* ── 3. BARRA DE FILTROS & ORDENAÇÃO POR TOQUE (TOUCH-FRIENDLY) ── */}
       <div className="max-w-6xl w-full mx-auto flex flex-col gap-2.5 mb-5 bg-arcade-dark/85 backdrop-blur-md p-3 rounded-2xl border-2 border-arcade-yellow/40 shadow">
