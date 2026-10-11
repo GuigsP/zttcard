@@ -34,6 +34,7 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
   const [packFilter, setPackFilter] = useState<string>("ALL");
   const [sortOption, setSortOption] = useState<SortOption>("number");
   const [selectedCard, setSelectedCard] = useState<CatalogCard | null>(null);
+  const [activeAlbumSlug, setActiveAlbumSlug] = useState<string | null>(null);
 
   const [availablePacks, setAvailablePacks] = useState<DBPack[]>(() => getCachedPacks());
 
@@ -48,9 +49,13 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
     });
   }, []);
 
-  // Statistics
-  const totalCards = catalog.length || 1;
-  const collectedCount = catalog.filter((c) => (inventory[c.id] ?? 0) >= 1).length;
+  // Statistics for the selected album, or the whole catalog when no album is selected.
+  const scopedCards = packFilter === "ALL" ? catalog : catalog.filter((card) =>
+    cardBelongsToPack(card as any, packFilter, availablePacks) ||
+    (card.pack_ids ?? []).includes(packFilter) || card.collection === packFilter
+  );
+  const totalCards = scopedCards.length || 1;
+  const collectedCount = scopedCards.filter((c) => (inventory[c.id] ?? 0) >= 1).length;
   const progressPercent = Math.min(100, Math.max(0, Math.round((collectedCount / totalCards) * 100)));
 
   // Filtered & Sorted Cards
@@ -91,7 +96,7 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
         if (sortOption === "name") return (a.name || "").localeCompare(b.name || "");
         return (a.slotNumber ?? 0) - (b.slotNumber ?? 0); // "number" default
       });
-  }, [catalog, inventory, statusFilter, posFilter, packFilter, sortOption]);
+  }, [catalog, inventory, statusFilter, posFilter, packFilter, sortOption, availablePacks]);
 
   const handleCardClick = (card: CatalogCard) => {
     sound.playCardFlip();
@@ -107,7 +112,8 @@ export function AlbumView({ onBack, onOpenShop, onOpenTrades }: Props) {
             type="button"
             onClick={() => {
               sound.playAttrSelect();
-              onBack();
+              setActiveAlbumSlug(null);
+              setPackFilter("ALL");
             }}
             className="font-arcade text-[10px] px-3 py-2 bg-arcade-dark text-arcade-yellow border-2 border-arcade-yellow hover:bg-arcade-red hover:text-white transition-colors cursor-pointer active:scale-95 shadow"
           >
